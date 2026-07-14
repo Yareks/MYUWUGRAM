@@ -22,3 +22,25 @@ GitHub Actions workflow:
 ```bash
 gh run download --name zastogram-apk --dir downloads
 ```
+
+## Ускорение сборки
+
+Нативные библиотеки (FFmpeg/libvpx/BoringSSL) — это основная часть времени сборки
+(~14 из ~18 минут). Они меняются только когда двигается `HEAD` upstream
+`Telegram-FOSS`, поэтому workflow кэширует их через `actions/cache` с ключом по
+коммиту upstream:
+
+- `.zastogram-native-cache` — собранные нативные артефакты (key:
+  `zastogram-native-<abi>-v1-<upstream-sha>`);
+- `~/.gradle/caches`, `~/.gradle/wrapper` — зависимости Gradle.
+
+Пока upstream не обновился, каждый push по этому репозиторию собирается за пару
+минут (только Gradle). При смене upstream кэш инвалидируется автоматически и натив
+собирается заново один раз.
+
+## Пункт "Zastogram" в настройках
+
+Строка "Zastogram: Chat text size" в Settings открывает отдельный экран
+`ZastogramTextSizeActivity` с настоящим ползунком размера шрифта чата
+(`SeekBarView`, привязан к `SharedConfig.fontSize`, 12–30). Значение применяется
+живьём и сохраняется.

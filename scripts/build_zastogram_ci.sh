@@ -60,7 +60,7 @@ replace_once(
 )
 replace_once(
     '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == filtersRow) {',
-    '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == zastogramTextSizeRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n                AndroidUtilities.runOnUIThread(() -> AndroidUtilities.scrollToFragmentRow(parentLayout, "textSizeHeaderRow"), 300);\n            } else if (position == filtersRow) {'
+    '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == zastogramTextSizeRow) {\n                presentFragment(new ZastogramTextSizeActivity());\n            } else if (position == filtersRow) {'
 )
 replace_once(
     '                settingsSectionRow2 = rowCount++;\n                chatRow = rowCount++;\n                privacyRow = rowCount++;',
@@ -80,6 +80,192 @@ replace_once(
 )
 path.write_text(text)
 PATCH_ZASTOGRAM_SETTINGS
+
+# Dedicated Zastogram screen with a real, self-contained chat-text-size slider.
+# Opening the full ThemeActivity and reflectively scrolling to its slider was
+# unreliable; this fragment owns a SeekBarView bound to SharedConfig.fontSize, so
+# tapping the row always lands on the slider.
+cat > TMessagesProj/src/main/java/org/telegram/ui/ZastogramTextSizeActivity.java <<'JAVA_ZASTOGRAM_EOF'
+package org.telegram.ui;
+
+import android.app.Activity;
+import android.content.Context;
+import android.content.SharedPreferences;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.text.TextPaint;
+import android.view.Gravity;
+import android.view.View;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+
+import androidx.recyclerview.widget.LinearLayoutManager;
+import androidx.recyclerview.widget.RecyclerView;
+
+import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.R;
+import org.telegram.messenger.SharedConfig;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Cells.HeaderCell;
+import org.telegram.ui.Cells.ShadowSectionCell;
+import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.ui.Components.SeekBarView;
+
+public class ZastogramTextSizeActivity extends BaseFragment {
+
+    private RecyclerListView listView;
+
+    private static final int startFontSize = 12;
+    private static final int endFontSize = 30;
+
+    @Override
+    public View createView(Context context) {
+        actionBar.setBackButtonImage(R.drawable.ic_ab_back);
+        actionBar.setAllowOverlayTitle(true);
+        actionBar.setTitle("Zastogram");
+        actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
+            @Override
+            public void onItemClick(int id) {
+                if (id == -1) {
+                    finishFragment();
+                }
+            }
+        });
+
+        fragmentView = new FrameLayout(context);
+        FrameLayout frameLayout = (FrameLayout) fragmentView;
+        frameLayout.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+
+        listView = new RecyclerListView(context);
+        listView.setItemAnimator(null);
+        listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
+        listView.setVerticalScrollBarEnabled(false);
+        frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP));
+
+        listView.setAdapter(new RecyclerListView.SelectionAdapter() {
+            @Override
+            public int getItemViewType(int position) {
+                return position;
+            }
+
+            @Override
+            public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+                View view;
+                if (viewType == 0) {
+                    HeaderCell headerCell = new HeaderCell(parent.getContext());
+                    headerCell.setText("Размер шрифта в чате");
+                    view = headerCell;
+                } else if (viewType == 1) {
+                    view = new TextSizeCell(parent.getContext());
+                } else {
+                    view = new ShadowSectionCell(parent.getContext());
+                }
+                return new RecyclerListView.Holder(view);
+            }
+
+            @Override
+            public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
+            }
+
+            @Override
+            public int getItemCount() {
+                return 3;
+            }
+
+            @Override
+            public boolean isEnabled(RecyclerView.ViewHolder holder) {
+                return false;
+            }
+        });
+
+        return fragmentView;
+    }
+
+    private void setFontSize(int size) {
+        if (size < startFontSize || size > endFontSize) {
+            return;
+        }
+        if (size == SharedConfig.fontSize) {
+            return;
+        }
+        SharedConfig.fontSize = size;
+        SharedConfig.fontSizeIsDefault = false;
+        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
+        if (preferences != null) {
+            preferences.edit().putInt("fons_size", SharedConfig.fontSize).commit();
+        }
+        Theme.createCommonMessageResources();
+        if (fragmentView != null) {
+            fragmentView.invalidate();
+        }
+    }
+
+    private class TextSizeCell extends FrameLayout {
+
+        private SeekBarView sizeBar;
+        private TextPaint textPaint;
+        private int lastWidth = -1;
+
+        public TextSizeCell(Context context) {
+            super(context);
+            setWillNotDraw(false);
+            setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+
+            textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            textPaint.setTextSize(AndroidUtilities.dp(16));
+
+            sizeBar = new SeekBarView(context);
+            sizeBar.setReportChanges(true);
+            sizeBar.setSeparatorsCount(endFontSize - startFontSize + 1);
+            sizeBar.setDelegate(new SeekBarView.SeekBarViewDelegate() {
+                @Override
+                public void onSeekBarDrag(boolean stop, float progress) {
+                    setFontSize(Math.round(startFontSize + (endFontSize - startFontSize) * progress));
+                    invalidate();
+                }
+
+                @Override
+                public void onSeekBarPressed(boolean pressed) {
+                }
+
+                @Override
+                public CharSequence getContentDescription() {
+                    return String.valueOf(Math.round(startFontSize + (endFontSize - startFontSize) * sizeBar.getProgress()));
+                }
+
+                @Override
+                public int getStepsCount() {
+                    return endFontSize - startFontSize;
+                }
+            });
+            sizeBar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            addView(sizeBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 5, 33, 39, 0));
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(83), View.MeasureSpec.EXACTLY));
+            int width = View.MeasureSpec.getSize(widthMeasureSpec);
+            if (lastWidth != width) {
+                sizeBar.setProgress((SharedConfig.fontSize - startFontSize) / (float) (endFontSize - startFontSize));
+                lastWidth = width;
+            }
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            textPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteValueText));
+            String value = "" + SharedConfig.fontSize;
+            float textWidth = textPaint.measureText(value);
+            canvas.drawText(value, getMeasuredWidth() - AndroidUtilities.dp(21) - textWidth, AndroidUtilities.dp(31), textPaint);
+        }
+    }
+}
+JAVA_ZASTOGRAM_EOF
 
 # Limit ABI set for faster CI builds. Default is arm64-v8a; override env vars for universal builds.
 BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI}" python3 - <<'PATCH_ABI'
