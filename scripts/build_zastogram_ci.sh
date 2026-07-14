@@ -178,7 +178,7 @@ public class ZastogramTextSizeActivity extends BaseFragment {
         contentLayout.addView(iconHeader, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         TextCell iconCell = new TextCell(context);
-        iconCell.setTextAndValue("Из галереи", "Добавить на главный экран", true);
+        iconCell.setTextAndValue("Выбрать изображение", "Из галереи", true);
         iconCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         iconCell.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 0));
         iconCell.setOnClickListener(v -> pickImageFromGallery());
