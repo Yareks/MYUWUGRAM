@@ -88,7 +88,14 @@ echo "== gradlew assembleAfatDebug =="
 ./gradlew --no-daemon assembleAfatDebug
 
 mkdir -p ../zastogram-output
-find . -path '*/build/outputs/apk/*/debug/*.apk' -print -exec cp {} ../zastogram-output/zastogram-afat-debug.apk \;
+find . -name '*.apk' -print
+first_apk=$(find . -name '*.apk' | head -1)
+if [ -z "${first_apk}" ]; then
+  echo "No APK files were produced"
+  find . -path '*/build/outputs/*' -maxdepth 8 -type f | sort | tail -200
+  return 1
+fi
+cp "${first_apk}" ../zastogram-output/zastogram-afat-debug.apk
 ls -lah ../zastogram-output
 }
 
