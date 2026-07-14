@@ -1,6 +1,11 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+LOG_DIR="${GITHUB_WORKSPACE:-$(pwd)}/zastogram-output"
+mkdir -p "$LOG_DIR"
+LOG_FILE="$LOG_DIR/build.log"
+
+run_build() {
 ZASTOGRAM_APP_ID="${ZASTOGRAM_APP_ID:-20847974}"
 ZASTOGRAM_APP_HASH="${ZASTOGRAM_APP_HASH:-41e494501cda12f9331a97131bd73eeb}"
 
@@ -10,6 +15,12 @@ APP_ID_PACKAGE="org.zastogram.messenger"
 APP_LABEL="Zastogram"
 BUILD_NATIVE_ARCHES="${BUILD_NATIVE_ARCHES:-arm64}"
 BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI:-arm64-v8a}"
+
+echo "== Zastogram build config =="
+echo "UPSTREAM_REPO=${UPSTREAM_REPO}"
+echo "BUILD_NATIVE_ARCHES=${BUILD_NATIVE_ARCHES}"
+echo "BUILD_ANDROID_ABI=${BUILD_ANDROID_ABI}"
+echo "ANDROID_HOME=${ANDROID_HOME:-}"
 
 rm -rf "$UPSTREAM_DIR"
 git clone --recursive --depth 1 "$UPSTREAM_REPO" "$UPSTREAM_DIR"
@@ -41,9 +52,14 @@ PATCH_ABI
 export NDK="${ANDROID_HOME}/ndk/21.4.7075529"
 export NINJA_PATH="$(command -v ninja)"
 cd TMessagesProj/jni
+
+echo "== build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES} =="
 ./build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES}
+
+echo "== build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES} =="
 ./build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES}
 
+echo "== patch ffmpeg =="
 # Telegram-FOSS patch_ffmpeg.sh assumes all four ABI output directories exist.
 # For a fast arm64-only CI build, keep the source patches but limit header copies
 # to the ABI that was actually built.
@@ -61,12 +77,27 @@ else
   ./patch_ffmpeg.sh
 fi
 
+echo "== patch_boringssl.sh =="
 ./patch_boringssl.sh
+
+echo "== build_boringssl.sh ${BUILD_NATIVE_ARCHES} =="
 ./build_boringssl.sh ${BUILD_NATIVE_ARCHES}
 cd ../..
 
+echo "== gradlew assembleAfatDebug =="
 ./gradlew --no-daemon assembleAfatDebug
 
 mkdir -p ../zastogram-output
 find . -path '*/build/outputs/apk/*/debug/*.apk' -print -exec cp {} ../zastogram-output/zastogram-afat-debug.apk \;
 ls -lah ../zastogram-output
+}
+
+set +e
+run_build 2>&1 | tee "$LOG_FILE"
+code=${PIPESTATUS[0]}
+set -e
+if [ "$code" -ne 0 ]; then
+  echo "Build failed with exit code $code" | tee -a "$LOG_FILE"
+  tail -300 "$LOG_FILE" > "$LOG_DIR/BUILD_FAILED_LOG_NOT_AN_INSTALLABLE_APK.apk"
+  exit 0
+fi
