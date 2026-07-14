@@ -5,12 +5,17 @@ on:
   push:
     branches:
       - arena/019f5df1-myuwugram
+      - arena/019f5ea9-myuwugram
 
 jobs:
   build:
     name: Build full Zastogram APK
     runs-on: ubuntu-22.04
     timeout-minutes: 360
+
+    env:
+      BUILD_ANDROID_ABI: arm64-v8a
+      BUILD_NATIVE_ARCHES: arm64
 
     steps:
       - name: Checkout session repository
@@ -39,6 +44,32 @@ jobs:
             'cmake;3.10.2.4988404' \
             'ndk;21.4.7075529'
           yes | sdkmanager --licenses >/dev/null || true
+
+      - name: Resolve Telegram-FOSS upstream commit
+        id: upstream
+        run: |
+          sha=$(git ls-remote https://github.com/Telegram-FOSS-Team/Telegram-FOSS.git HEAD | awk '{print $1}')
+          echo "sha=$sha" >> "$GITHUB_OUTPUT"
+          echo "Upstream Telegram-FOSS commit: $sha"
+
+      # Натив (FFmpeg/libvpx/BoringSSL) — ~14 из ~18 минут. Меняется только при
+      # сдвиге HEAD upstream, поэтому кэш по коммиту upstream превращает почти
+      # каждый пуш в быструю Gradle-сборку.
+      - name: Cache native libraries
+        uses: actions/cache@v4
+        with:
+          path: .zastogram-native-cache
+          key: zastogram-native-${{ env.BUILD_ANDROID_ABI }}-v1-${{ steps.upstream.outputs.sha }}
+
+      - name: Cache Gradle dependencies
+        uses: actions/cache@v4
+        with:
+          path: |
+            ~/.gradle/caches
+            ~/.gradle/wrapper
+          key: zastogram-gradle-v1-${{ steps.upstream.outputs.sha }}
+          restore-keys: |
+            zastogram-gradle-v1-
 
       - name: Build APK from Telegram-FOSS upstream
         env:
