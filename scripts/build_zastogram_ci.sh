@@ -90,20 +90,30 @@ package org.telegram.ui;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.net.Uri;
+import android.os.Build;
 import android.text.TextPaint;
 import android.view.Gravity;
 import android.view.View;
-import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.Toast;
 
-import androidx.recyclerview.widget.LinearLayoutManager;
-import androidx.recyclerview.widget.RecyclerView;
+import androidx.core.content.pm.ShortcutInfoCompat;
+import androidx.core.content.pm.ShortcutManagerCompat;
+import androidx.core.graphics.drawable.IconCompat;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -111,16 +121,19 @@ import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
+import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Components.LayoutHelper;
-import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SeekBarView;
+
+import java.io.InputStream;
 
 public class ZastogramTextSizeActivity extends BaseFragment {
 
-    private RecyclerListView listView;
-
     private static final int startFontSize = 12;
     private static final int endFontSize = 30;
+    private static final int REQUEST_PICK_ICON = 42001;
+
+    private TextSizeCell textSizeCell;
 
     @Override
     public View createView(Context context) {
@@ -140,47 +153,38 @@ public class ZastogramTextSizeActivity extends BaseFragment {
         FrameLayout frameLayout = (FrameLayout) fragmentView;
         frameLayout.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
 
-        listView = new RecyclerListView(context);
-        listView.setItemAnimator(null);
-        listView.setLayoutManager(new LinearLayoutManager(context, LinearLayoutManager.VERTICAL, false));
-        listView.setVerticalScrollBarEnabled(false);
-        frameLayout.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP));
+        ScrollView scrollView = new ScrollView(context);
+        frameLayout.addView(scrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP));
 
-        listView.setAdapter(new RecyclerListView.SelectionAdapter() {
-            @Override
-            public int getItemViewType(int position) {
-                return position;
-            }
+        LinearLayout contentLayout = new LinearLayout(context);
+        contentLayout.setOrientation(LinearLayout.VERTICAL);
+        scrollView.addView(contentLayout, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-            @Override
-            public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-                View view;
-                if (viewType == 0) {
-                    HeaderCell headerCell = new HeaderCell(parent.getContext());
-                    headerCell.setText("Размер шрифта в чате");
-                    view = headerCell;
-                } else if (viewType == 1) {
-                    view = new TextSizeCell(parent.getContext());
-                } else {
-                    view = new ShadowSectionCell(parent.getContext());
-                }
-                return new RecyclerListView.Holder(view);
-            }
+        // --- Chat text size slider ---
+        HeaderCell textSizeHeader = new HeaderCell(context);
+        textSizeHeader.setText(LocaleController.getString("TextSizeHeader", R.string.TextSizeHeader));
+        textSizeHeader.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        contentLayout.addView(textSizeHeader, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-            @Override
-            public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-            }
+        textSizeCell = new TextSizeCell(context);
+        contentLayout.addView(textSizeCell, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-            @Override
-            public int getItemCount() {
-                return 3;
-            }
+        contentLayout.addView(new ShadowSectionCell(context), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-            @Override
-            public boolean isEnabled(RecyclerView.ViewHolder holder) {
-                return false;
-            }
-        });
+        // --- App icon from gallery ---
+        HeaderCell iconHeader = new HeaderCell(context);
+        iconHeader.setText("Иконка приложения");
+        iconHeader.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        contentLayout.addView(iconHeader, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        TextCell iconCell = new TextCell(context);
+        iconCell.setTextAndValue("Из галереи", "Добавить на главный экран", true);
+        iconCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        iconCell.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 0));
+        iconCell.setOnClickListener(v -> pickImageFromGallery());
+        contentLayout.addView(iconCell, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+
+        contentLayout.addView(new ShadowSectionCell(context), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         return fragmentView;
     }
@@ -199,9 +203,112 @@ public class ZastogramTextSizeActivity extends BaseFragment {
             preferences.edit().putInt("fons_size", SharedConfig.fontSize).commit();
         }
         Theme.createCommonMessageResources();
-        if (fragmentView != null) {
-            fragmentView.invalidate();
+        if (textSizeCell != null) {
+            textSizeCell.invalidate();
         }
+    }
+
+    private void pickImageFromGallery() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_PICK);
+            intent.setType("image/*");
+            startActivityForResult(intent, REQUEST_PICK_ICON);
+        } catch (Exception e) {
+            FileLog.e(e);
+            AndroidUtilities.runOnUIThread(() -> Toast.makeText(getParentActivity(), "Не удалось открыть галерею", Toast.LENGTH_SHORT).show());
+        }
+    }
+
+    @Override
+    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_PICK_ICON && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            applyCustomIcon(data.getData());
+        }
+    }
+
+    private void applyCustomIcon(Uri uri) {
+        new Thread(() -> {
+            Bitmap square = null;
+            try {
+                square = loadCenterCroppedSquare(uri);
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+            final Bitmap bitmap = square;
+            AndroidUtilities.runOnUIThread(() -> {
+                Context context = ApplicationLoader.applicationContext;
+                if (bitmap == null) {
+                    Toast.makeText(context, "Не удалось загрузить изображение", Toast.LENGTH_SHORT).show();
+                    return;
+                }
+                if (Build.VERSION.SDK_INT < 26 || !ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
+                    Toast.makeText(context, "Эта версия Android не поддерживает смену иконки", Toast.LENGTH_LONG).show();
+                    return;
+                }
+                Intent shortcutIntent = new Intent(Intent.ACTION_MAIN);
+                shortcutIntent.setClassName(context.getPackageName(), "org.telegram.ui.LaunchActivity");
+                shortcutIntent.addCategory(Intent.CATEGORY_LAUNCHER);
+                ShortcutInfoCompat info = new ShortcutInfoCompat.Builder(context, "zastogram_icon_" + System.currentTimeMillis())
+                        .setShortLabel("Zastogram")
+                        .setIcon(IconCompat.createWithAdaptiveBitmap(bitmap))
+                        .setIntent(shortcutIntent)
+                        .build();
+                ShortcutManagerCompat.requestPinShortcut(context, info, null);
+                Toast.makeText(context, "Подтвердите добавление иконки на главный экран", Toast.LENGTH_LONG).show();
+            });
+        }).start();
+    }
+
+    private Bitmap loadCenterCroppedSquare(Uri uri) throws Exception {
+        Context context = ApplicationLoader.applicationContext;
+        BitmapFactory.Options bounds = new BitmapFactory.Options();
+        bounds.inJustDecodeBounds = true;
+        InputStream boundStream = context.getContentResolver().openInputStream(uri);
+        try {
+            BitmapFactory.decodeStream(boundStream, null, bounds);
+        } finally {
+            if (boundStream != null) {
+                boundStream.close();
+            }
+        }
+        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
+            return null;
+        }
+        int srcSize = Math.min(bounds.outWidth, bounds.outHeight);
+        int sample = 1;
+        while (srcSize / sample > 432) {
+            sample *= 2;
+        }
+        BitmapFactory.Options opts = new BitmapFactory.Options();
+        opts.inSampleSize = sample;
+        Bitmap decoded;
+        InputStream is = context.getContentResolver().openInputStream(uri);
+        try {
+            decoded = BitmapFactory.decodeStream(is, null, opts);
+        } finally {
+            if (is != null) {
+                is.close();
+            }
+        }
+        if (decoded == null) {
+            return null;
+        }
+        int w = decoded.getWidth();
+        int h = decoded.getHeight();
+        int side = Math.min(w, h);
+        Bitmap cropped = Bitmap.createBitmap(decoded, (w - side) / 2, (h - side) / 2, side, side);
+        int target = AndroidUtilities.dp(108);
+        if (target <= 0) {
+            target = 432;
+        }
+        Bitmap scaled = Bitmap.createScaledBitmap(cropped, target, target, true);
+        if (cropped != decoded) {
+            cropped.recycle();
+        }
+        if (decoded != scaled) {
+            decoded.recycle();
+        }
+        return scaled;
     }
 
     private class TextSizeCell extends FrameLayout {
@@ -243,12 +350,12 @@ public class ZastogramTextSizeActivity extends BaseFragment {
                 }
             });
             sizeBar.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
-            addView(sizeBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 5, 33, 39, 0));
+            addView(sizeBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.LEFT | Gravity.TOP, 5, 16, 39, 0));
         }
 
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(83), View.MeasureSpec.EXACTLY));
+            super.onMeasure(widthMeasureSpec, View.MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(60), View.MeasureSpec.EXACTLY));
             int width = View.MeasureSpec.getSize(widthMeasureSpec);
             if (lastWidth != width) {
                 sizeBar.setProgress((SharedConfig.fontSize - startFontSize) / (float) (endFontSize - startFontSize));
@@ -261,10 +368,11 @@ public class ZastogramTextSizeActivity extends BaseFragment {
             textPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteValueText));
             String value = "" + SharedConfig.fontSize;
             float textWidth = textPaint.measureText(value);
-            canvas.drawText(value, getMeasuredWidth() - AndroidUtilities.dp(21) - textWidth, AndroidUtilities.dp(31), textPaint);
+            canvas.drawText(value, getMeasuredWidth() - AndroidUtilities.dp(21) - textWidth, AndroidUtilities.dp(32), textPaint);
         }
     }
 }
+
 JAVA_ZASTOGRAM_EOF
 
 # Limit ABI set for faster CI builds. Default is arm64-v8a; override env vars for universal builds.
