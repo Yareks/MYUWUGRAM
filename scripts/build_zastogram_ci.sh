@@ -15,11 +15,14 @@ APP_ID_PACKAGE="org.zastogram.messenger"
 APP_LABEL="Zastogram"
 BUILD_NATIVE_ARCHES="${BUILD_NATIVE_ARCHES:-arm64}"
 BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI:-arm64-v8a}"
+NATIVE_CACHE_ROOT="${NATIVE_CACHE_ROOT:-${GITHUB_WORKSPACE:-$(pwd)}/.zastogram-native-cache}"
+NATIVE_CACHE_DIR="${NATIVE_CACHE_ROOT}/${BUILD_ANDROID_ABI}"
 
 echo "== Zastogram build config =="
 echo "UPSTREAM_REPO=${UPSTREAM_REPO}"
 echo "BUILD_NATIVE_ARCHES=${BUILD_NATIVE_ARCHES}"
 echo "BUILD_ANDROID_ABI=${BUILD_ANDROID_ABI}"
+echo "NATIVE_CACHE_DIR=${NATIVE_CACHE_DIR}"
 echo "ANDROID_HOME=${ANDROID_HOME:-}"
 
 rm -rf "$UPSTREAM_DIR"
@@ -35,6 +38,48 @@ API_KEYS
 sed -i "s/APP_PACKAGE=org.telegram.messenger/APP_PACKAGE=${APP_ID_PACKAGE}/" gradle.properties
 sed -i 's/android:label="Telegram FOSS Beta"/android:label="Zastogram Beta"/g' TMessagesProj/config/debug/AndroidManifest*.xml
 sed -i 's/android:label="Telegram FOSS"/android:label="Zastogram"/g' TMessagesProj/config/release/AndroidManifest*.xml
+
+
+# Add a small Zastogram test entry to Settings. It opens the existing real chat
+# text-size controls (SharedConfig.fontSize), so this is functional and not a
+# placeholder UI.
+python3 - <<'PATCH_ZASTOGRAM_SETTINGS'
+from pathlib import Path
+path = Path('TMessagesProj/src/main/java/org/telegram/ui/ProfileActivity.java')
+text = path.read_text()
+
+def replace_once(old, new):
+    global text
+    if old not in text:
+        raise SystemExit(f'ProfileActivity patch anchor not found:\n{old[:240]}')
+    text = text.replace(old, new, 1)
+
+replace_once(
+    '    private int chatRow;\n',
+    '    private int chatRow;\n    private int zastogramTextSizeRow;\n'
+)
+replace_once(
+    '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == filtersRow) {',
+    '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == zastogramTextSizeRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n                AndroidUtilities.runOnUIThread(() -> AndroidUtilities.scrollToFragmentRow(parentLayout, "textSizeHeaderRow"), 300);\n            } else if (position == filtersRow) {'
+)
+replace_once(
+    '                settingsSectionRow2 = rowCount++;\n                chatRow = rowCount++;\n                privacyRow = rowCount++;',
+    '                settingsSectionRow2 = rowCount++;\n                chatRow = rowCount++;\n                zastogramTextSizeRow = rowCount++;\n                privacyRow = rowCount++;'
+)
+replace_once(
+    'position == versionRow || position == dataRow || position == chatRow ||\n                        position == questionRow',
+    'position == versionRow || position == dataRow || position == chatRow || position == zastogramTextSizeRow ||\n                        position == questionRow'
+)
+replace_once(
+    'position == languageRow || position == dataRow || position == chatRow ||\n                    position == questionRow',
+    'position == languageRow || position == dataRow || position == chatRow || position == zastogramTextSizeRow ||\n                    position == questionRow'
+)
+replace_once(
+    '                    } else if (position == chatRow) {\n                        textCell.setTextAndIcon(LocaleController.getString("ChatSettings", R.string.ChatSettings), R.drawable.msg2_discussion, true);\n                    } else if (position == filtersRow) {',
+    '                    } else if (position == chatRow) {\n                        textCell.setTextAndIcon(LocaleController.getString("ChatSettings", R.string.ChatSettings), R.drawable.msg2_discussion, true);\n                    } else if (position == zastogramTextSizeRow) {\n                        textCell.setTextAndValueAndIcon("Zastogram: Chat text size", SharedConfig.fontSize + " dp", false, R.drawable.msg2_discussion, true);\n                    } else if (position == filtersRow) {'
+)
+path.write_text(text)
+PATCH_ZASTOGRAM_SETTINGS
 
 # Limit ABI set for faster CI builds. Default is arm64-v8a; override env vars for universal builds.
 BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI}" python3 - <<'PATCH_ABI'
@@ -76,35 +121,70 @@ export NDK="${ANDROID_HOME}/ndk/21.4.7075529"
 export NINJA_PATH="$(command -v ninja)"
 cd TMessagesProj/jni
 
-echo "== build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES} =="
-./build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES}
+restore_native_cache() {
+  if [ -f "${NATIVE_CACHE_DIR}/.complete" ]; then
+    echo "== Restoring native cache from ${NATIVE_CACHE_DIR} =="
+    mkdir -p ffmpeg/build libvpx/build boringssl/build
+    cp -a "${NATIVE_CACHE_DIR}/ffmpeg-${BUILD_ANDROID_ABI}" "ffmpeg/build/${BUILD_ANDROID_ABI}"
+    cp -a "${NATIVE_CACHE_DIR}/libvpx-${BUILD_ANDROID_ABI}" "libvpx/build/${BUILD_ANDROID_ABI}"
+    cp -a "${NATIVE_CACHE_DIR}/boringssl-${BUILD_ANDROID_ABI}" "boringssl/build/${BUILD_ANDROID_ABI}"
+    return 0
+  fi
+  return 1
+}
 
-echo "== build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES} =="
-./build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES}
+save_native_cache() {
+  echo "== Saving native cache to ${NATIVE_CACHE_DIR} =="
+  rm -rf "${NATIVE_CACHE_DIR}"
+  mkdir -p "${NATIVE_CACHE_DIR}"
+  cp -a "ffmpeg/build/${BUILD_ANDROID_ABI}" "${NATIVE_CACHE_DIR}/ffmpeg-${BUILD_ANDROID_ABI}"
+  cp -a "libvpx/build/${BUILD_ANDROID_ABI}" "${NATIVE_CACHE_DIR}/libvpx-${BUILD_ANDROID_ABI}"
+  cp -a "boringssl/build/${BUILD_ANDROID_ABI}" "${NATIVE_CACHE_DIR}/boringssl-${BUILD_ANDROID_ABI}"
+  date -u > "${NATIVE_CACHE_DIR}/.complete"
+}
 
-echo "== patch ffmpeg =="
-# Telegram-FOSS patch_ffmpeg.sh assumes all four ABI output directories exist.
-# For a fast arm64-only CI build, keep the source patches but limit header copies
-# to the ABI that was actually built.
-if [ "${BUILD_ANDROID_ABI}" = "arm64-v8a" ]; then
-  patch -d ffmpeg -p1 < patches/ffmpeg/0001-compilation-magic.patch
-  patch -d ffmpeg -p1 < patches/ffmpeg/0002-compilation-magic-2.patch
-  install -D ffmpeg/libavformat/dv.h ffmpeg/build/arm64-v8a/include/libavformat/dv.h
-  install -D ffmpeg/libavformat/isom.h ffmpeg/build/arm64-v8a/include/libavformat/isom.h
-  install -D ffmpeg/libavcodec/bytestream.h ffmpeg/build/arm64-v8a/include/libavcodec/bytestream.h
-  install -D ffmpeg/libavcodec/get_bits.h ffmpeg/build/arm64-v8a/include/libavcodec/get_bits.h
-  install -D ffmpeg/libavcodec/golomb.h ffmpeg/build/arm64-v8a/include/libavcodec/golomb.h
-  install -D ffmpeg/libavcodec/vlc.h ffmpeg/build/arm64-v8a/include/libavcodec/vlc.h
-  install -D ffmpeg/libavutil/intmath.h ffmpeg/build/arm64-v8a/include/libavutil/intmath.h
+patch_ffmpeg_for_current_abi() {
+  echo "== patch ffmpeg =="
+  # Telegram-FOSS patch_ffmpeg.sh assumes all four ABI output directories exist.
+  # For a fast arm64-only CI build, keep the source patches but limit header copies
+  # to the ABI that was actually built.
+  if [ "${BUILD_ANDROID_ABI}" = "arm64-v8a" ]; then
+    patch -d ffmpeg -p1 < patches/ffmpeg/0001-compilation-magic.patch
+    patch -d ffmpeg -p1 < patches/ffmpeg/0002-compilation-magic-2.patch
+    install -D ffmpeg/libavformat/dv.h ffmpeg/build/arm64-v8a/include/libavformat/dv.h
+    install -D ffmpeg/libavformat/isom.h ffmpeg/build/arm64-v8a/include/libavformat/isom.h
+    install -D ffmpeg/libavcodec/bytestream.h ffmpeg/build/arm64-v8a/include/libavcodec/bytestream.h
+    install -D ffmpeg/libavcodec/get_bits.h ffmpeg/build/arm64-v8a/include/libavcodec/get_bits.h
+    install -D ffmpeg/libavcodec/golomb.h ffmpeg/build/arm64-v8a/include/libavcodec/golomb.h
+    install -D ffmpeg/libavcodec/vlc.h ffmpeg/build/arm64-v8a/include/libavcodec/vlc.h
+    install -D ffmpeg/libavutil/intmath.h ffmpeg/build/arm64-v8a/include/libavutil/intmath.h
+  else
+    ./patch_ffmpeg.sh
+  fi
+}
+
+if restore_native_cache; then
+  echo "== Native cache hit: skipping libvpx/ffmpeg/boringssl compilation =="
+  patch_ffmpeg_for_current_abi
+  echo "== patch_boringssl.sh =="
+  ./patch_boringssl.sh
 else
-  ./patch_ffmpeg.sh
+  echo "== Native cache miss: building native dependencies =="
+  echo "== build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES} =="
+  ./build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES}
+
+  echo "== build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES} =="
+  ./build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES}
+
+  patch_ffmpeg_for_current_abi
+
+  echo "== patch_boringssl.sh =="
+  ./patch_boringssl.sh
+
+  echo "== build_boringssl.sh ${BUILD_NATIVE_ARCHES} =="
+  ./build_boringssl.sh ${BUILD_NATIVE_ARCHES}
+  save_native_cache
 fi
-
-echo "== patch_boringssl.sh =="
-./patch_boringssl.sh
-
-echo "== build_boringssl.sh ${BUILD_NATIVE_ARCHES} =="
-./build_boringssl.sh ${BUILD_NATIVE_ARCHES}
 cd ../..
 
 echo "== gradlew assembleAfatDebug =="
