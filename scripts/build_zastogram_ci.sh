@@ -26,9 +26,10 @@ sed -i 's/android:label="Telegram FOSS Beta"/android:label="Zastogram Beta"/g' T
 sed -i 's/android:label="Telegram FOSS"/android:label="Zastogram"/g' TMessagesProj/config/release/AndroidManifest*.xml
 
 # Limit ABI set for faster CI builds. Default is arm64-v8a; override env vars for universal builds.
-python3 - <<'PATCH_ABI'
+BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI}" python3 - <<'PATCH_ABI'
+import os
 from pathlib import Path
-abi = '${BUILD_ANDROID_ABI}'
+abi = os.environ['BUILD_ANDROID_ABI']
 for rel in ['TMessagesProj_App/build.gradle', 'TMessagesProj_AppStandalone/build.gradle']:
     path = Path(rel)
     text = path.read_text()
