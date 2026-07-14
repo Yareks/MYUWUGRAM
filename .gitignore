@@ -1,0 +1,8 @@
+# Local toolchains / caches
+.tools/
+build/
+.gradle/
+
+# Local/OS files
+.DS_Store
+*.log
