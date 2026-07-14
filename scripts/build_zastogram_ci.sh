@@ -43,7 +43,24 @@ export NINJA_PATH="$(command -v ninja)"
 cd TMessagesProj/jni
 ./build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES}
 ./build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES}
-./patch_ffmpeg.sh
+
+# Telegram-FOSS patch_ffmpeg.sh assumes all four ABI output directories exist.
+# For a fast arm64-only CI build, keep the source patches but limit header copies
+# to the ABI that was actually built.
+if [ "${BUILD_ANDROID_ABI}" = "arm64-v8a" ]; then
+  patch -d ffmpeg -p1 < patches/ffmpeg/0001-compilation-magic.patch
+  patch -d ffmpeg -p1 < patches/ffmpeg/0002-compilation-magic-2.patch
+  install -D ffmpeg/libavformat/dv.h ffmpeg/build/arm64-v8a/include/libavformat/dv.h
+  install -D ffmpeg/libavformat/isom.h ffmpeg/build/arm64-v8a/include/libavformat/isom.h
+  install -D ffmpeg/libavcodec/bytestream.h ffmpeg/build/arm64-v8a/include/libavcodec/bytestream.h
+  install -D ffmpeg/libavcodec/get_bits.h ffmpeg/build/arm64-v8a/include/libavcodec/get_bits.h
+  install -D ffmpeg/libavcodec/golomb.h ffmpeg/build/arm64-v8a/include/libavcodec/golomb.h
+  install -D ffmpeg/libavcodec/vlc.h ffmpeg/build/arm64-v8a/include/libavcodec/vlc.h
+  install -D ffmpeg/libavutil/intmath.h ffmpeg/build/arm64-v8a/include/libavutil/intmath.h
+else
+  ./patch_ffmpeg.sh
+fi
+
 ./patch_boringssl.sh
 ./build_boringssl.sh ${BUILD_NATIVE_ARCHES}
 cd ../..
