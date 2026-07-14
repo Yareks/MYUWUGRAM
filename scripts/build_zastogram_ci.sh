@@ -8,6 +8,8 @@ UPSTREAM_REPO="https://github.com/Telegram-FOSS-Team/Telegram-FOSS.git"
 UPSTREAM_DIR="Telegram-FOSS-src"
 APP_ID_PACKAGE="org.zastogram.messenger"
 APP_LABEL="Zastogram"
+BUILD_NATIVE_ARCHES="${BUILD_NATIVE_ARCHES:-arm64}"
+BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI:-arm64-v8a}"
 
 rm -rf "$UPSTREAM_DIR"
 git clone --recursive --depth 1 "$UPSTREAM_REPO" "$UPSTREAM_DIR"
@@ -23,15 +25,26 @@ sed -i "s/APP_PACKAGE=org.telegram.messenger/APP_PACKAGE=${APP_ID_PACKAGE}/" gra
 sed -i 's/android:label="Telegram FOSS Beta"/android:label="Zastogram Beta"/g' TMessagesProj/config/debug/AndroidManifest*.xml
 sed -i 's/android:label="Telegram FOSS"/android:label="Zastogram"/g' TMessagesProj/config/release/AndroidManifest*.xml
 
+# Limit ABI set for faster CI builds. Default is arm64-v8a; override env vars for universal builds.
+python3 - <<'PATCH_ABI'
+from pathlib import Path
+abi = '${BUILD_ANDROID_ABI}'
+for rel in ['TMessagesProj_App/build.gradle', 'TMessagesProj_AppStandalone/build.gradle']:
+    path = Path(rel)
+    text = path.read_text()
+    text = text.replace('abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"', f'abiFilters "{abi}"')
+    path.write_text(text)
+PATCH_ABI
+
 # Build native dependencies required by Telegram-FOSS.
 export NDK="${ANDROID_HOME}/ndk/21.4.7075529"
 export NINJA_PATH="$(command -v ninja)"
 cd TMessagesProj/jni
-./build_libvpx_clang.sh
-./build_ffmpeg_clang.sh
+./build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES}
+./build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES}
 ./patch_ffmpeg.sh
 ./patch_boringssl.sh
-./build_boringssl.sh
+./build_boringssl.sh ${BUILD_NATIVE_ARCHES}
 cd ../..
 
 ./gradlew --no-daemon assembleAfatDebug
