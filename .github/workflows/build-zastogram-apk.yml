@@ -22,9 +22,6 @@ jobs:
           distribution: temurin
           java-version: '11'
 
-      - name: Setup Android SDK command line tools
-        uses: android-actions/setup-android@v3
-
       - name: Install Linux build dependencies
         run: |
           sudo apt-get update
@@ -32,6 +29,10 @@ jobs:
 
       - name: Install Android SDK/NDK components
         run: |
+          echo "ANDROID_HOME=${ANDROID_HOME}"
+          echo "ANDROID_SDK_ROOT=${ANDROID_SDK_ROOT}"
+          export PATH="${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/tools/bin:${ANDROID_HOME}/platform-tools:${PATH}"
+          command -v sdkmanager
           sdkmanager --install \
             'platforms;android-33' \
             'build-tools;33.0.0' \
