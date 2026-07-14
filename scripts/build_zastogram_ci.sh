@@ -41,11 +41,34 @@ BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI}" python3 - <<'PATCH_ABI'
 import os
 from pathlib import Path
 abi = os.environ['BUILD_ANDROID_ABI']
+
+# App modules have ABI filters in productFlavors.
 for rel in ['TMessagesProj_App/build.gradle', 'TMessagesProj_AppStandalone/build.gradle']:
     path = Path(rel)
     text = path.read_text()
     text = text.replace('abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"', f'abiFilters "{abi}"')
     path.write_text(text)
+
+# The library module owns externalNativeBuild/CMake. Without this filter Gradle
+# still tries to build tmessages.49 for armeabi-v7a/x86/x86_64, while the fast CI
+# only builds FFmpeg/libvpx/BoringSSL for arm64-v8a.
+path = Path('TMessagesProj/build.gradle')
+text = path.read_text()
+if 'abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"' in text:
+    text = text.replace('abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"', f'abiFilters "{abi}"')
+elif 'abiFilters "arm64-v8a"' not in text:
+    marker = '        multiDexEnabled true
+
+        externalNativeBuild {'
+    replacement = f'        multiDexEnabled true
+
+        ndk {{
+            abiFilters "{abi}"
+        }}
+
+        externalNativeBuild {{'
+    text = text.replace(marker, replacement)
+path.write_text(text)
 PATCH_ABI
 
 # Build native dependencies required by Telegram-FOSS.
