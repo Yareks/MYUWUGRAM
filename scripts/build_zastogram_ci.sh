@@ -11,14 +11,14 @@ ZASTOGRAM_APP_HASH="${ZASTOGRAM_APP_HASH:-41e494501cda12f9331a97131bd73eeb}"
 
 UPSTREAM_REPO="https://github.com/Telegram-FOSS-Team/Telegram-FOSS.git"
 UPSTREAM_DIR="Telegram-FOSS-src"
-APP_ID_PACKAGE="org.zastogram.messenger"
-APP_LABEL="Zastogram"
+APP_ID_PACKAGE="org.meowgram.messenger"
+APP_LABEL="MeowGram"
 BUILD_NATIVE_ARCHES="${BUILD_NATIVE_ARCHES:-arm64}"
 BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI:-arm64-v8a}"
 NATIVE_CACHE_ROOT="${NATIVE_CACHE_ROOT:-${GITHUB_WORKSPACE:-$(pwd)}/.zastogram-native-cache}"
 NATIVE_CACHE_DIR="${NATIVE_CACHE_ROOT}/${BUILD_ANDROID_ABI}"
 
-echo "== Zastogram build config =="
+echo "== MeowGram build config =="
 echo "UPSTREAM_REPO=${UPSTREAM_REPO}"
 echo "BUILD_NATIVE_ARCHES=${BUILD_NATIVE_ARCHES}"
 echo "BUILD_ANDROID_ABI=${BUILD_ANDROID_ABI}"
@@ -43,11 +43,11 @@ cat >> gradle.properties <<'GRADLE_CACHE_PROPS'
 org.gradle.caching=true
 org.gradle.parallel=true
 GRADLE_CACHE_PROPS
-sed -i 's/android:label="Telegram FOSS Beta"/android:label="Zastogram Beta"/g' TMessagesProj/config/debug/AndroidManifest*.xml
-sed -i 's/android:label="Telegram FOSS"/android:label="Zastogram"/g' TMessagesProj/config/release/AndroidManifest*.xml
+sed -i 's/android:label="Telegram FOSS Beta"/android:label="MeowGram Beta"/g' TMessagesProj/config/debug/AndroidManifest*.xml
+sed -i 's/android:label="Telegram FOSS"/android:label="MeowGram"/g' TMessagesProj/config/release/AndroidManifest*.xml
 
 
-# Add a small Zastogram test entry to Settings. It opens the existing real chat
+# Add a small MeowGram test entry to Settings. It opens the existing real chat
 # text-size controls (SharedConfig.fontSize), so this is functional and not a
 # placeholder UI.
 python3 - <<'PATCH_ZASTOGRAM_SETTINGS'
@@ -63,48 +63,44 @@ def replace_once(old, new):
 
 replace_once(
     '    private int chatRow;\n',
-    '    private int chatRow;\n    private int zastogramTextSizeRow;\n'
+    '    private int chatRow;\n    private int meowgramTextSizeRow;\n'
 )
 replace_once(
     '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == filtersRow) {',
-    '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == zastogramTextSizeRow) {\n                presentFragment(new ZastogramTextSizeActivity());\n            } else if (position == filtersRow) {'
+    '            } else if (position == chatRow) {\n                presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));\n            } else if (position == meowgramTextSizeRow) {\n                presentFragment(new MeowGramTextSizeActivity());\n            } else if (position == filtersRow) {'
 )
 replace_once(
     '                settingsSectionRow2 = rowCount++;\n                chatRow = rowCount++;\n                privacyRow = rowCount++;',
-    '                settingsSectionRow2 = rowCount++;\n                chatRow = rowCount++;\n                zastogramTextSizeRow = rowCount++;\n                privacyRow = rowCount++;'
+    '                settingsSectionRow2 = rowCount++;\n                chatRow = rowCount++;\n                meowgramTextSizeRow = rowCount++;\n                privacyRow = rowCount++;'
 )
 replace_once(
     'position == versionRow || position == dataRow || position == chatRow ||\n                        position == questionRow',
-    'position == versionRow || position == dataRow || position == chatRow || position == zastogramTextSizeRow ||\n                        position == questionRow'
+    'position == versionRow || position == dataRow || position == chatRow || position == meowgramTextSizeRow ||\n                        position == questionRow'
 )
 replace_once(
     'position == languageRow || position == dataRow || position == chatRow ||\n                    position == questionRow',
-    'position == languageRow || position == dataRow || position == chatRow || position == zastogramTextSizeRow ||\n                    position == questionRow'
+    'position == languageRow || position == dataRow || position == chatRow || position == meowgramTextSizeRow ||\n                    position == questionRow'
 )
 replace_once(
     '                    } else if (position == chatRow) {\n                        textCell.setTextAndIcon(LocaleController.getString("ChatSettings", R.string.ChatSettings), R.drawable.msg2_discussion, true);\n                    } else if (position == filtersRow) {',
-    '                    } else if (position == chatRow) {\n                        textCell.setTextAndIcon(LocaleController.getString("ChatSettings", R.string.ChatSettings), R.drawable.msg2_discussion, true);\n                    } else if (position == zastogramTextSizeRow) {\n                        textCell.setTextAndValueAndIcon("Zastogram: Chat text size", SharedConfig.fontSize + " dp", false, R.drawable.msg2_discussion, true);\n                    } else if (position == filtersRow) {'
+    '                    } else if (position == chatRow) {\n                        textCell.setTextAndIcon(LocaleController.getString("ChatSettings", R.string.ChatSettings), R.drawable.msg2_discussion, true);\n                    } else if (position == meowgramTextSizeRow) {\n                        textCell.setTextAndValueAndIcon("MeowGram", SharedConfig.fontSize + " dp", false, R.drawable.msg2_discussion, true);\n                    } else if (position == filtersRow) {'
 )
 path.write_text(text)
 PATCH_ZASTOGRAM_SETTINGS
 
-# Dedicated Zastogram screen with a real, self-contained chat-text-size slider.
+# Dedicated MeowGram screen with a real chat-text-size slider and a launcher-icon switcher.
 # Opening the full ThemeActivity and reflectively scrolling to its slider was
 # unreliable; this fragment owns a SeekBarView bound to SharedConfig.fontSize, so
 # tapping the row always lands on the slider.
-cat > TMessagesProj/src/main/java/org/telegram/ui/ZastogramTextSizeActivity.java <<'JAVA_ZASTOGRAM_EOF'
+cat > TMessagesProj/src/main/java/org/telegram/ui/MeowGramTextSizeActivity.java <<'JAVA_ZASTOGRAM_EOF'
 package org.telegram.ui;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.Intent;
+import android.content.DialogInterface;
 import android.content.SharedPreferences;
-import android.graphics.Bitmap;
-import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Paint;
-import android.net.Uri;
-import android.os.Build;
 import android.text.TextPaint;
 import android.view.Gravity;
 import android.view.View;
@@ -113,17 +109,13 @@ import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.Toast;
 
-import androidx.core.content.pm.ShortcutInfoCompat;
-import androidx.core.content.pm.ShortcutManagerCompat;
-import androidx.core.graphics.drawable.IconCompat;
-
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
@@ -132,21 +124,19 @@ import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.SeekBarView;
 
-import java.io.InputStream;
-
-public class ZastogramTextSizeActivity extends BaseFragment {
+public class MeowGramTextSizeActivity extends BaseFragment {
 
     private static final int startFontSize = 12;
     private static final int endFontSize = 30;
-    private static final int REQUEST_PICK_ICON = 42001;
 
     private TextSizeCell textSizeCell;
+    private TextCell iconCell;
 
     @Override
     public View createView(Context context) {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
-        actionBar.setTitle("Zastogram");
+        actionBar.setTitle("MeowGram");
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
             @Override
             public void onItemClick(int id) {
@@ -178,22 +168,75 @@ public class ZastogramTextSizeActivity extends BaseFragment {
 
         contentLayout.addView(new ShadowSectionCell(context), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        // --- App icon from gallery ---
+        // --- App icon switcher (changes the REAL launcher icon) ---
         HeaderCell iconHeader = new HeaderCell(context);
-        iconHeader.setText("Иконка приложения");
+        iconHeader.setText(LocaleController.getString("AppIcon", R.string.AppIcon));
         iconHeader.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         contentLayout.addView(iconHeader, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        TextCell iconCell = new TextCell(context);
-        iconCell.setTextAndValue("Выбрать изображение", "Из галереи", true);
+        iconCell = new TextCell(context);
+        iconCell.setTextAndValue(LocaleController.getString("AppIcon", R.string.AppIcon), currentIconTitle(), true);
         iconCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         iconCell.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 0));
-        iconCell.setOnClickListener(v -> pickImageFromGallery());
+        iconCell.setOnClickListener(v -> showIconPicker());
         contentLayout.addView(iconCell, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         contentLayout.addView(new ShadowSectionCell(context), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
         return fragmentView;
+    }
+
+    private String currentIconTitle() {
+        for (LauncherIconController.LauncherIcon icon : LauncherIconController.LauncherIcon.values()) {
+            if (LauncherIconController.isEnabled(icon)) {
+                return iconTitle(icon);
+            }
+        }
+        return iconTitle(LauncherIconController.LauncherIcon.DEFAULT);
+    }
+
+    private String iconTitle(LauncherIconController.LauncherIcon icon) {
+        try {
+            String name = ApplicationLoader.applicationContext.getResources().getResourceEntryName(icon.title);
+            return LocaleController.getString(name, icon.title);
+        } catch (Exception e) {
+            return LocaleController.getString("AppIconDefault", R.string.AppIconDefault);
+        }
+    }
+
+    private int iconPreview(LauncherIconController.LauncherIcon icon) {
+        switch (icon.key) {
+            case "VintageIcon": return R.mipmap.icon_6_launcher;
+            case "AquaIcon": return R.mipmap.icon_4_launcher;
+            case "PremiumIcon": return R.mipmap.icon_3_launcher;
+            case "TurboIcon": return R.mipmap.icon_5_launcher;
+            case "NoxIcon": return R.mipmap.icon_2_launcher;
+            default: return R.mipmap.ic_launcher;
+        }
+    }
+
+    private void showIconPicker() {
+        LauncherIconController.LauncherIcon[] icons = LauncherIconController.LauncherIcon.values();
+        CharSequence[] names = new CharSequence[icons.length];
+        int[] previews = new int[icons.length];
+        for (int i = 0; i < icons.length; i++) {
+            names[i] = iconTitle(icons[i]);
+            previews[i] = iconPreview(icons[i]);
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(LocaleController.getString("AppIcon", R.string.AppIcon));
+        builder.setItems(names, previews, (DialogInterface dialog, int which) -> {
+            LauncherIconController.LauncherIcon chosen = icons[which];
+            if (!LauncherIconController.isEnabled(chosen)) {
+                LauncherIconController.setIcon(chosen);
+                if (iconCell != null) {
+                    iconCell.setTextAndValue(LocaleController.getString("AppIcon", R.string.AppIcon), iconTitle(chosen), true);
+                }
+                Toast.makeText(getParentActivity(), LocaleController.getString("AppIcon", R.string.AppIcon) + ": " + iconTitle(chosen), Toast.LENGTH_SHORT).show();
+            }
+        });
+        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
+        builder.create().show();
     }
 
     private void setFontSize(int size) {
@@ -213,109 +256,6 @@ public class ZastogramTextSizeActivity extends BaseFragment {
         if (textSizeCell != null) {
             textSizeCell.invalidate();
         }
-    }
-
-    private void pickImageFromGallery() {
-        try {
-            Intent intent = new Intent(Intent.ACTION_PICK);
-            intent.setType("image/*");
-            startActivityForResult(intent, REQUEST_PICK_ICON);
-        } catch (Exception e) {
-            FileLog.e(e);
-            AndroidUtilities.runOnUIThread(() -> Toast.makeText(getParentActivity(), "Не удалось открыть галерею", Toast.LENGTH_SHORT).show());
-        }
-    }
-
-    @Override
-    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
-        if (requestCode == REQUEST_PICK_ICON && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
-            applyCustomIcon(data.getData());
-        }
-    }
-
-    private void applyCustomIcon(Uri uri) {
-        new Thread(() -> {
-            Bitmap square = null;
-            try {
-                square = loadCenterCroppedSquare(uri);
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-            final Bitmap bitmap = square;
-            AndroidUtilities.runOnUIThread(() -> {
-                Context context = ApplicationLoader.applicationContext;
-                if (bitmap == null) {
-                    Toast.makeText(context, "Не удалось загрузить изображение", Toast.LENGTH_SHORT).show();
-                    return;
-                }
-                if (Build.VERSION.SDK_INT < 26 || !ShortcutManagerCompat.isRequestPinShortcutSupported(context)) {
-                    Toast.makeText(context, "Эта версия Android не поддерживает смену иконки", Toast.LENGTH_LONG).show();
-                    return;
-                }
-                Intent shortcutIntent = new Intent(Intent.ACTION_MAIN);
-                shortcutIntent.setClassName(context.getPackageName(), "org.telegram.ui.LaunchActivity");
-                shortcutIntent.addCategory(Intent.CATEGORY_LAUNCHER);
-                ShortcutInfoCompat info = new ShortcutInfoCompat.Builder(context, "zastogram_icon_" + System.currentTimeMillis())
-                        .setShortLabel("Zastogram")
-                        .setIcon(IconCompat.createWithAdaptiveBitmap(bitmap))
-                        .setIntent(shortcutIntent)
-                        .build();
-                ShortcutManagerCompat.requestPinShortcut(context, info, null);
-                Toast.makeText(context, "Подтвердите добавление иконки на главный экран", Toast.LENGTH_LONG).show();
-            });
-        }).start();
-    }
-
-    private Bitmap loadCenterCroppedSquare(Uri uri) throws Exception {
-        Context context = ApplicationLoader.applicationContext;
-        BitmapFactory.Options bounds = new BitmapFactory.Options();
-        bounds.inJustDecodeBounds = true;
-        InputStream boundStream = context.getContentResolver().openInputStream(uri);
-        try {
-            BitmapFactory.decodeStream(boundStream, null, bounds);
-        } finally {
-            if (boundStream != null) {
-                boundStream.close();
-            }
-        }
-        if (bounds.outWidth <= 0 || bounds.outHeight <= 0) {
-            return null;
-        }
-        int srcSize = Math.min(bounds.outWidth, bounds.outHeight);
-        int sample = 1;
-        while (srcSize / sample > 432) {
-            sample *= 2;
-        }
-        BitmapFactory.Options opts = new BitmapFactory.Options();
-        opts.inSampleSize = sample;
-        Bitmap decoded;
-        InputStream is = context.getContentResolver().openInputStream(uri);
-        try {
-            decoded = BitmapFactory.decodeStream(is, null, opts);
-        } finally {
-            if (is != null) {
-                is.close();
-            }
-        }
-        if (decoded == null) {
-            return null;
-        }
-        int w = decoded.getWidth();
-        int h = decoded.getHeight();
-        int side = Math.min(w, h);
-        Bitmap cropped = Bitmap.createBitmap(decoded, (w - side) / 2, (h - side) / 2, side, side);
-        int target = AndroidUtilities.dp(108);
-        if (target <= 0) {
-            target = 432;
-        }
-        Bitmap scaled = Bitmap.createScaledBitmap(cropped, target, target, true);
-        if (cropped != decoded) {
-            cropped.recycle();
-        }
-        if (decoded != scaled) {
-            decoded.recycle();
-        }
-        return scaled;
     }
 
     private class TextSizeCell extends FrameLayout {
