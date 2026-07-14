@@ -36,6 +36,13 @@ API_KEYS
 
 # Rebrand visible app name and Android applicationId. Do not rename Java packages.
 sed -i "s/APP_PACKAGE=org.telegram.messenger/APP_PACKAGE=${APP_ID_PACKAGE}/" gradle.properties
+# Enable Gradle build cache + parallel execution. The build cache stores task
+# outputs under ~/.gradle/caches (persisted by the workflow's Gradle cache), so
+# unchanged compile/dex tasks are reused across runs instead of recompiled.
+cat >> gradle.properties <<'GRADLE_CACHE_PROPS'
+org.gradle.caching=true
+org.gradle.parallel=true
+GRADLE_CACHE_PROPS
 sed -i 's/android:label="Telegram FOSS Beta"/android:label="Zastogram Beta"/g' TMessagesProj/config/debug/AndroidManifest*.xml
 sed -i 's/android:label="Telegram FOSS"/android:label="Zastogram"/g' TMessagesProj/config/release/AndroidManifest*.xml
 
@@ -416,7 +423,10 @@ export NINJA_PATH="$(command -v ninja)"
 cd TMessagesProj/jni
 
 restore_native_cache() {
-  if [ -f "${NATIVE_CACHE_DIR}/.complete" ]; then
+  if [ -f "${NATIVE_CACHE_DIR}/.complete" ] \
+     && [ -d "${NATIVE_CACHE_DIR}/ffmpeg-${BUILD_ANDROID_ABI}" ] \
+     && [ -d "${NATIVE_CACHE_DIR}/libvpx-${BUILD_ANDROID_ABI}" ] \
+     && [ -d "${NATIVE_CACHE_DIR}/boringssl-${BUILD_ANDROID_ABI}" ]; then
     echo "== Restoring native cache from ${NATIVE_CACHE_DIR} =="
     mkdir -p ffmpeg/build libvpx/build boringssl/build
     cp -a "${NATIVE_CACHE_DIR}/ffmpeg-${BUILD_ANDROID_ABI}" "ffmpeg/build/${BUILD_ANDROID_ABI}"
@@ -424,6 +434,7 @@ restore_native_cache() {
     cp -a "${NATIVE_CACHE_DIR}/boringssl-${BUILD_ANDROID_ABI}" "boringssl/build/${BUILD_ANDROID_ABI}"
     return 0
   fi
+  echo "== Native cache not usable (marker or dirs missing), will rebuild =="
   return 1
 }
 
@@ -482,7 +493,7 @@ fi
 cd ../..
 
 echo "== gradlew assembleAfatDebug =="
-./gradlew --no-daemon -Pandroid.injected.build.abi=${BUILD_ANDROID_ABI} assembleAfatDebug
+./gradlew --no-daemon --build-cache -Pandroid.injected.build.abi=${BUILD_ANDROID_ABI} assembleAfatDebug
 
 mkdir -p ../zastogram-output
 find . -name '*.apk' -print
