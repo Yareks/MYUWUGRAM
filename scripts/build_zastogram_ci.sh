@@ -6,15 +6,6 @@ mkdir -p "$LOG_DIR"
 LOG_FILE="$LOG_DIR/build.log"
 
 run_build() {
-# Ensure ImageMagick is present for the custom-icon generator. The workflow's
-# dependency step may not install it, so install it here if missing. Guarded so
-# a failure never breaks the APK build (the icon generator degrades gracefully).
-if ! command -v convert >/dev/null 2>&1; then
-  echo "== Installing ImageMagick for icon generation =="
-  sudo apt-get update -qq 2>/dev/null || true
-  sudo apt-get install -y imagemagick >/dev/null 2>&1 || echo "ImageMagick install failed; icon generator will skip"
-fi
-
 ZASTOGRAM_APP_ID="${ZASTOGRAM_APP_ID:-20847974}"
 ZASTOGRAM_APP_HASH="${ZASTOGRAM_APP_HASH:-41e494501cda12f9331a97131bd73eeb}"
 
@@ -54,13 +45,6 @@ org.gradle.parallel=true
 GRADLE_CACHE_PROPS
 sed -i 's/android:label="Telegram FOSS Beta"/android:label="MeowGram Beta"/g' TMessagesProj/config/debug/AndroidManifest*.xml
 sed -i 's/android:label="Telegram FOSS"/android:label="MeowGram"/g' TMessagesProj/config/release/AndroidManifest*.xml
-
-# Replace the launcher icon at BUILD TIME from branding/icon.png (in the wrapper
-# repo, i.e. ../branding relative to the cloned upstream dir). Generates legacy
-# PNGs + Android 8+ adaptive icon (photo background + semi-transparent Telegram
-# paper-plane foreground). No-op if the image is absent, so the build never breaks.
-echo "== MeowGram custom launcher icon =="
-bash "../scripts/generate_meowgram_icon.sh" "../branding/icon.png" "TMessagesProj/src/main/res"
 
 
 # Add a small MeowGram test entry to Settings. It opens the existing real chat
@@ -339,48 +323,8 @@ elif 'abiFilters "arm64-v8a"' not in text:
 
         externalNativeBuild {{'
     text = text.replace(marker, replacement)
-path.write_text(text)
-PATCH_ABI
-
-# Pin a STABLE debug signing key so successive CI builds share a signature and
-# install over each other (instead of "App not installed" from random per-run
-# debug keys). The keystore is generated in CI (keytool ships with the JDK) and
-# stored under ~/.gradle/caches/, which the workflow's Gradle cache already
-# persists across runs. See the keystore-generation block before gradlew.
-python3 - <<'PATCH_SIGNING'
-from pathlib import Path
-path = Path('TMessagesProj_App/build.gradle')
-text = path.read_text()
-if 'signingConfigs {' not in text:
-    marker = '    buildTypes {\n        debug {\n            debuggable true'
-    replacement = (
-        '    def meowgramKeystore = file(System.env.MEOWGRAM_KEYSTORE ?: \'meowgram-debug.keystore\')\n'
-        '    signingConfigs {\n'
-        '        meowgram {\n'
-        '            if (meowgramKeystore.exists()) {\n'
-        '                storeFile meowgramKeystore\n'
-        '                storePassword \'meowgram\'\n'
-        '                keyAlias \'meowgram\'\n'
-        '                keyPassword \'meowgram\'\n'
-        '            }\n'
-        '        }\n'
-        '    }\n'
-        '\n'
-        '    buildTypes {\n'
-        '        debug {\n'
-        '            debuggable true\n'
-        '            if (meowgramKeystore.exists()) {\n'
-        '                signingConfig signingConfigs.meowgram\n'
-        '            }'
-    )
-    if marker not in text:
-        raise SystemExit('build.gradle debug-buildType anchor not found')
-    text = text.replace(marker, replacement, 1)
     path.write_text(text)
-    print('Stable debug signingConfig wired into TMessagesProj_App/build.gradle')
-else:
-    print('signingConfigs already present')
-PATCH_SIGNING
+PATCH_ABI
 
 # Build native dependencies required by Telegram-FOSS.
 export NDK="${ANDROID_HOME}/ndk/21.4.7075529"
@@ -458,27 +402,6 @@ fi
 cd ../..
 
 echo "== gradlew assembleAfatDebug =="
-
-# Generate (once, then cached) a STABLE debug keystore under ~/.gradle/caches/,
-# which the workflow's Gradle cache persists. All builds then share this key, so
-# a new APK installs over an older one instead of failing with "App not installed".
-export MEOWGRAM_KEYSTORE="$HOME/.gradle/caches/meowgram-signing/debug.keystore"
-mkdir -p "$(dirname "$MEOWGRAM_KEYSTORE")"
-if [ ! -f "$MEOWGRAM_KEYSTORE" ]; then
-  echo "== Generating new stable MeowGram debug keystore =="
-  if command -v keytool >/dev/null 2>&1; then
-    keytool -genkeypair -v \
-      -keystore "$MEOWGRAM_KEYSTORE" -storetype PKCS12 \
-      -alias meowgram -keyalg RSA -keysize 2048 -validity 36500 \
-      -storepass meowgram -keypass meowgram \
-      -dname "CN=MeowGram,O=MeowGram,L=Frankfurt,ST=Hesse,C=DE" || echo "WARN: keystore generation failed; using default debug signing"
-  else
-    echo "WARN: keytool not found; using default debug signing"
-  fi
-else
-  echo "== Reusing cached stable MeowGram debug keystore =="
-fi
-
 ./gradlew --no-daemon --build-cache -Pandroid.injected.build.abi=${BUILD_ANDROID_ABI} assembleAfatDebug
 
 mkdir -p ../zastogram-output
@@ -489,7 +412,7 @@ if [ -z "${first_apk}" ]; then
   find . -path '*/build/outputs/*' -maxdepth 8 -type f | sort | tail -200
   return 1
 fi
-cp "${first_apk}" ../zastogram-output/zastogram-afat-debug.apk
+cp "${first_apk}" ../zastogram-output/meowgram-arm64-debug.apk
 ls -lah ../zastogram-output
 }
 
