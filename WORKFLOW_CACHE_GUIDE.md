@@ -185,3 +185,34 @@ workflow он **не установлен**, поэтому генератор �
 После правки: замени `branding/icon.png` на свою картинку и запусти сборку —
 иконка приложения во всей системе станет твоей с полупрозрачным самолётиком
 Telegram поверх.
+
+---
+
+# Прямая ссылка на APK через GitHub Release (фикс «пакет повреждён»)
+
+APK из artifacts качается как 63-МБ zip, который часто обрывается → Android
+пишет «пакет повреждён». Чтобы получить **прямую публичную ссылку на сам .apk**
+(без zip, без логина), добавь этот шаг в конец `.github/workflows/build-zastogram-apk.yml`,
+сразу после блока «Upload APK artifact»:
+
+```yaml
+      - name: Publish APK to GitHub Release
+        if: success()
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: meowgram-${{ github.run_id }}
+          name: MeowGram build ${{ github.run_number }}
+          files: zastogram-output/*.apk
+          prerelease: true
+          make_latest: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+```
+
+После следующей сборки в разделе **Releases** репозитория появится прямой APK.
+Ссылка будет вида:
+`https://github.com/Yareks/MYUWUGRAM/releases/download/meowgram-<id>/zastogram-afat-debug.apk`
+— публичная, качается целиком в один клик, без zip.
+
+(Этот шаг не может добавить токен Arena — нет права `workflows`. Владелец репо
+вставляет его в веб-редакторе файла или пушит с PAT со scope `workflow`.)
