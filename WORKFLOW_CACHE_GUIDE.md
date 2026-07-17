@@ -150,3 +150,38 @@ jobs:
 - `Cache native libraries` → `Cache hit` (попадание) или `Cache restored`/`miss`.
 - Внутри скрипта: `== Restoring native cache ...` (попадание) или
   `== Native cache miss: building native dependencies ...`.
+
+---
+
+# Дополнительно: включить генерацию кастомной иконки (нужен ImageMagick)
+
+Иконка приложения (`branding/icon.png`) заменяется в момент сборки скриптом
+`scripts/generate_meowgram_icon.sh`, которому нужен ImageMagick. В текущем
+workflow он **не установлен**, поэтому генератор аккуратно пропускается
+(сборка не ломается, остаётся upstream-иконка).
+
+Чтобы кастомная иконка применилась, добавь `imagemagick` в шаг установки
+зависимостей в `.github/workflows/build-zastogram-apk.yml`:
+
+Было:
+```yaml
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build golang yasm nasm cmake make pkg-config
+```
+
+Стало (добавлен `imagemagick` в конец):
+```yaml
+      - name: Install Linux build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build golang yasm nasm cmake make pkg-config imagemagick
+```
+
+(Этот файл не может править токен Arena — нет права `workflows`. Владелец репо
+редактирует его в вебе или пушит с PAT со scope `workflow`.)
+
+После правки: замени `branding/icon.png` на свою картинку и запусти сборку —
+иконка приложения во всей системе станет твоей с полупрозрачным самолётиком
+Telegram поверх.
