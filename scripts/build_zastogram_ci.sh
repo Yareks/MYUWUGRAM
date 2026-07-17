@@ -46,6 +46,13 @@ GRADLE_CACHE_PROPS
 sed -i 's/android:label="Telegram FOSS Beta"/android:label="MeowGram Beta"/g' TMessagesProj/config/debug/AndroidManifest*.xml
 sed -i 's/android:label="Telegram FOSS"/android:label="MeowGram"/g' TMessagesProj/config/release/AndroidManifest*.xml
 
+# Replace the launcher icon at BUILD TIME from branding/icon.png (in the wrapper
+# repo, i.e. ../branding relative to the cloned upstream dir). Generates legacy
+# PNGs + Android 8+ adaptive icon (photo background + semi-transparent Telegram
+# paper-plane foreground). No-op if the image is absent, so the build never breaks.
+echo "== MeowGram custom launcher icon =="
+bash "../scripts/generate_meowgram_icon.sh" "../branding/icon.png" "TMessagesProj/src/main/res"
+
 
 # Add a small MeowGram test entry to Settings. It opens the existing real chat
 # text-size controls (SharedConfig.fontSize), so this is functional and not a
@@ -97,7 +104,6 @@ package org.telegram.ui;
 
 import android.app.Activity;
 import android.content.Context;
-import android.content.DialogInterface;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -107,7 +113,6 @@ import android.view.View;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
-import android.widget.Toast;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -115,12 +120,10 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.ActionBar;
-import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
-import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.SeekBarView;
 
@@ -130,7 +133,6 @@ public class MeowGramTextSizeActivity extends BaseFragment {
     private static final int endFontSize = 30;
 
     private TextSizeCell textSizeCell;
-    private TextCell iconCell;
 
     @Override
     public View createView(Context context) {
@@ -168,75 +170,7 @@ public class MeowGramTextSizeActivity extends BaseFragment {
 
         contentLayout.addView(new ShadowSectionCell(context), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
-        // --- App icon switcher (changes the REAL launcher icon) ---
-        HeaderCell iconHeader = new HeaderCell(context);
-        iconHeader.setText(LocaleController.getString("AppIcon", R.string.AppIcon));
-        iconHeader.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        contentLayout.addView(iconHeader, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        iconCell = new TextCell(context);
-        iconCell.setTextAndValue(LocaleController.getString("AppIcon", R.string.AppIcon), currentIconTitle(), true);
-        iconCell.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-        iconCell.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector), 0));
-        iconCell.setOnClickListener(v -> showIconPicker());
-        contentLayout.addView(iconCell, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
-        contentLayout.addView(new ShadowSectionCell(context), new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-
         return fragmentView;
-    }
-
-    private String currentIconTitle() {
-        for (LauncherIconController.LauncherIcon icon : LauncherIconController.LauncherIcon.values()) {
-            if (LauncherIconController.isEnabled(icon)) {
-                return iconTitle(icon);
-            }
-        }
-        return iconTitle(LauncherIconController.LauncherIcon.DEFAULT);
-    }
-
-    private String iconTitle(LauncherIconController.LauncherIcon icon) {
-        try {
-            String name = ApplicationLoader.applicationContext.getResources().getResourceEntryName(icon.title);
-            return LocaleController.getString(name, icon.title);
-        } catch (Exception e) {
-            return LocaleController.getString("AppIconDefault", R.string.AppIconDefault);
-        }
-    }
-
-    private int iconPreview(LauncherIconController.LauncherIcon icon) {
-        switch (icon.key) {
-            case "VintageIcon": return R.mipmap.icon_6_launcher;
-            case "AquaIcon": return R.mipmap.icon_4_launcher;
-            case "PremiumIcon": return R.mipmap.icon_3_launcher;
-            case "TurboIcon": return R.mipmap.icon_5_launcher;
-            case "NoxIcon": return R.mipmap.icon_2_launcher;
-            default: return R.mipmap.ic_launcher;
-        }
-    }
-
-    private void showIconPicker() {
-        LauncherIconController.LauncherIcon[] icons = LauncherIconController.LauncherIcon.values();
-        CharSequence[] names = new CharSequence[icons.length];
-        int[] previews = new int[icons.length];
-        for (int i = 0; i < icons.length; i++) {
-            names[i] = iconTitle(icons[i]);
-            previews[i] = iconPreview(icons[i]);
-        }
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(LocaleController.getString("AppIcon", R.string.AppIcon));
-        builder.setItems(names, previews, (DialogInterface dialog, int which) -> {
-            LauncherIconController.LauncherIcon chosen = icons[which];
-            if (!LauncherIconController.isEnabled(chosen)) {
-                LauncherIconController.setIcon(chosen);
-                if (iconCell != null) {
-                    iconCell.setTextAndValue(LocaleController.getString("AppIcon", R.string.AppIcon), iconTitle(chosen), true);
-                }
-                Toast.makeText(getParentActivity(), LocaleController.getString("AppIcon", R.string.AppIcon) + ": " + iconTitle(chosen), Toast.LENGTH_SHORT).show();
-            }
-        });
-        builder.setNegativeButton(LocaleController.getString("Cancel", R.string.Cancel), null);
-        builder.create().show();
     }
 
     private void setFontSize(int size) {
@@ -321,6 +255,48 @@ public class MeowGramTextSizeActivity extends BaseFragment {
 }
 
 JAVA_ZASTOGRAM_EOF
+
+# Network watchdog (#2: messages stop sending/receiving until re-entry). The
+# MTProto socket can stall while the app is in use without any event that would
+# trigger a reconnect (which only happens on app-resume / network change). This
+# injects a lightweight repeating check into ApplicationLoader.postInitApplication
+# that, while the screen is on, nudges the connection with resumeNetworkMaybe()
+# when it is neither Connected nor Updating. Idempotent, low overhead, no UI.
+python3 - <<'PATCH_MEOWGRAM_WATCHDOG'
+from pathlib import Path
+path = Path('TMessagesProj/src/main/java/org/telegram/messenger/ApplicationLoader.java')
+text = path.read_text()
+anchor = '        applicationInited = true;\n        NativeLoader.initNativeLibs(ApplicationLoader.applicationContext);\n'
+if anchor not in text:
+    raise SystemExit('ApplicationLoader postInit anchor not found')
+inject = anchor + '''        // MeowGram network watchdog: see scripts/build_zastogram_ci.sh.
+        applicationHandler.postDelayed(new Runnable() {
+            @Override
+            public void run() {
+                try {
+                    if (isScreenOn) {
+                        int account = org.telegram.messenger.UserConfig.selectedAccount;
+                        org.telegram.tgnet.ConnectionsManager cm = org.telegram.tgnet.ConnectionsManager.getInstance(account);
+                        int state = cm.getConnectionState();
+                        if (state != org.telegram.tgnet.ConnectionsManager.ConnectionStateConnected
+                                && state != org.telegram.tgnet.ConnectionsManager.ConnectionStateUpdating
+                                && state != org.telegram.tgnet.ConnectionsManager.ConnectionStateConnecting) {
+                            cm.resumeNetworkMaybe();
+                        }
+                    }
+                } catch (Throwable ignore) {
+                }
+                applicationHandler.postDelayed(this, 20000);
+            }
+        }, 20000);
+'''
+if 'MeowGram network watchdog' not in text:
+    text = text.replace(anchor, inject, 1)
+    path.write_text(text)
+    print('Watchdog injected into ApplicationLoader')
+else:
+    print('Watchdog already present')
+PATCH_MEOWGRAM_WATCHDOG
 
 # Limit ABI set for faster CI builds. Default is arm64-v8a; override env vars for universal builds.
 BUILD_ANDROID_ABI="${BUILD_ANDROID_ABI}" python3 - <<'PATCH_ABI'
