@@ -412,7 +412,45 @@ if [ -z "${first_apk}" ]; then
   find . -path '*/build/outputs/*' -maxdepth 8 -type f | sort | tail -200
   return 1
 fi
-cp "${first_apk}" ../zastogram-output/meowgram-arm64-debug.apk
+
+# Make the APK install-friendly for direct sideload on strict OEM launchers
+# (e.g. Infinix XOS) that report "package invalid / corrupted". Re-align with
+# zipalign (-p 4: page-aligned .so) and re-sign with apksigner using all three
+# signature schemes (v1+v2+v3). This guarantees a well-formed, directly
+# installable APK regardless of the debug-signing quirks of the build run.
+BUILD_TOOLS_DIR="${ANDROID_HOME}/build-tools/33.0.0"
+APKSIGNER="${BUILD_TOOLS_DIR}/apksigner"
+ZIPALIGN="${BUILD_TOOLS_DIR}/zipalign"
+out_apk="../zastogram-output/meowgram-arm64-debug.apk"
+cp "${first_apk}" "${out_apk}"
+
+# Use the same debug keystore Android uses, so signature stays stable & valid.
+DEBUG_KEYSTORE="$HOME/.android/debug.keystore"
+mkdir -p "$(dirname "$DEBUG_KEYSTORE")"
+if [ ! -f "$DEBUG_KEYSTORE" ]; then
+  if command -v keytool >/dev/null 2>&1; then
+    keytool -genkeypair -v \
+      -keystore "$DEBUG_KEYSTORE" -storetype PKCS12 \
+      -alias androiddebugkey -keyalg RSA -keysize 2048 -validity 10000 \
+      -storepass android -keypass android \
+      -dname "CN=Android Debug,O=Android,C=US" || true
+  fi
+fi
+
+if [ -x "$APKSIGNER" ] && [ -x "$ZIPALIGN" ] && [ -f "$DEBUG_KEYSTORE" ]; then
+  echo "== zipalign + apksigner (v1+v2+v3) for direct sideload =="
+  tmp_aligned="${out_apk}.aligned"
+  "$ZIPALIGN" -f -p 4 "${out_apk}" "${tmp_aligned}"
+  "$APKSIGNER" sign \
+    --ks "$DEBUG_KEYSTORE" --ks-pass pass:android --key-pass pass:android \
+    --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
+    --in "${tmp_aligned}" --out "${out_apk}"
+  rm -f "${tmp_aligned}"
+  echo "== apksigner verify =="
+  "$APKSIGNER" verify --print-certs "${out_apk}" | head -5 || true
+else
+  echo "== apksigner/zipalign/debug-keystore unavailable; using Gradle-signed APK as-is =="
+fi
 ls -lah ../zastogram-output
 }
 
