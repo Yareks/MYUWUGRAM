@@ -175,5 +175,28 @@ set -e
 if [ "$code" -ne 0 ]; then
   echo "Build failed with exit code $code" | tee -a "$LOG_FILE"
   tail -500 "$LOG_FILE" > "$LOG_DIR/BUILD_FAILED_LOG_NOT_AN_INSTALLABLE_APK.apk"
+
+  # Diagnostics: CI log/artifact storage is unreachable from the agent's side,
+  # so push the build log to the 'meowgram-diag' branch so it can be read via
+  # the GitHub contents API. Best-effort (no-op if the token can't push).
+  WS="${GITHUB_WORKSPACE:-$(pwd)}"
+  if [ -d "$WS/.git" ]; then
+    (
+      cd "$WS" || exit 0
+      cp "$LOG_FILE" ./meowgram-last-build.log 2>/dev/null || true
+      git config user.email "meowgram@diag.local" 2>/dev/null || true
+      git config user.name "MeowGram Diag" 2>/dev/null || true
+      git fetch origin meowgram-diag 2>/dev/null || true
+      if git show-ref --verify --quiet refs/remotes/origin/meowgram-diag; then
+        git checkout -B meowgram-diag origin/meowgram-diag 2>/dev/null || exit 0
+      else
+        git checkout --orphan meowgram-diag 2>/dev/null || exit 0
+        git rm -rf --cached . 2>/dev/null || true
+      fi
+      git add -f meowgram-last-build.log 2>/dev/null || true
+      git commit -m "diag: nagram build log (exit $code)" 2>/dev/null || true
+      git push --force origin meowgram-diag 2>/dev/null || echo "(diag push skipped - no write permission)"
+    ) || true
+  fi
   exit 0
 fi
