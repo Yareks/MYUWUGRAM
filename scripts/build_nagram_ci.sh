@@ -37,17 +37,29 @@ fi
 java -version 2>&1 | head -2 || echo "WARN: java not on PATH"
 
 # Prevent OOM during heavy native (BoringSSL) compilation. GitHub runners ship
-# ~7GB RAM and no swap; the newer BoringSSL (post-quantum crypto) gets
-# SIGKILL'd by the OOM killer mid-build (log ends abruptly at e.g. [474/639]).
-# Add a swap file and cap CMake parallelism so the build is reliable.
-if ! sudo swapon --show | grep -q swapfile; then
-  echo "== Adding 16GB swap to avoid OOM during native build =="
-  sudo fallocate -l 16G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=16384 status=none
-  sudo chmod 600 /swapfile
-  sudo mkswap /swapfile >/dev/null 2>&1
-  sudo swapon /swapfile 2>/dev/null || true
-fi
-free -h 2>/dev/null | head -3 || true
+# ~7GB RAM and no swap; the newer BoringSSL (post-quantum crypto) gets SIGKILL'd
+# by the OOM killer mid-build. Add a disk-aware swap file (never larger than
+# fits, leaving >=2GB free) and cap CMake parallelism. Every command here is
+# guarded so a missing swap can NEVER abort the build (an earlier version used a
+# 16GB swap that didn't fit and tripped 'set -e' via disk-full).
+{
+  if ! sudo swapon --show 2>/dev/null | grep -q swapfile; then
+    avail_mb=$(($(df -Pm / 2>/dev/null | awk 'NR==2{print $4}')))
+    want_mb=6144
+    if [ "${want_mb:-0}" -gt $((avail_mb - 2048)) ]; then
+      want_mb=$((avail_mb - 2048))
+    fi
+    if [ "${want_mb:-0}" -ge 1024 ]; then
+      echo "== Creating ${want_mb}MB swap (avail ${avail_mb}MB on /) =="
+      sudo fallocate -l "${want_mb}M" /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count="${want_mb}" status=none 2>/dev/null || true
+      sudo chmod 600 /swapfile 2>/dev/null || true
+      sudo mkswap /swapfile >/dev/null 2>&1 || true
+      sudo swapon /swapfile 2>/dev/null || true
+    fi
+  fi
+} || true
+echo "== memory ==" && (free -h 2>/dev/null | head -3 || true)
+echo "== disk ==" && (df -h / 2>/dev/null | head -2 || true)
 export CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
 
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
@@ -121,6 +133,9 @@ if p.exists():
     t = p.read_text()
     if 'abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"' in t:
         t = t.replace('abiFilters "armeabi-v7a", "arm64-v8a", "x86", "x86_64"', f'abiFilters "{abi}"')
+    # Cap the tmessages CMake build parallelism; the upstream default (-j=16)
+    # OOMs the runner. No-op if the arg is absent.
+    t = t.replace('-j=16', '-j=2')
     p.write_text(t)
 PATCH_ABI
 
