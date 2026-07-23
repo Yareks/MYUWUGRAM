@@ -143,7 +143,14 @@ PATCH_ABI
 # same build_*.sh scripts as Telegram-FOSS. NDK env is needed by them.
 export NDK="$NAGRAM_NDK"
 export ANDROID_NDK_HOME="$NAGRAM_NDK"
-export NINJA_PATH="$(command -v ninja)"
+# Force ninja to -j2 via a wrapper set as NINJA_PATH. build_boringssl.sh passes
+# -DCMAKE_MAKE_PROGRAM=${NINJA_PATH} to CMake, so this caps the BoringSSL build
+# parallelism regardless of whether CMAKE_BUILD_PARALLEL_LEVEL is honored —
+# without it the run OOMs mid-compile at [~474/639].
+REAL_NINJA="$(command -v ninja || echo ninja)"
+printf '#!/bin/bash\nexec "%s" -j2 "$@"\n' "$REAL_NINJA" > /tmp/ninja-j2.sh
+chmod +x /tmp/ninja-j2.sh
+export NINJA_PATH="/tmp/ninja-j2.sh"
 export PATH="$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
 cd TMessagesProj/jni
 
