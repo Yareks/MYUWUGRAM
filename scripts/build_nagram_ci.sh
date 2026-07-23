@@ -36,6 +36,20 @@ if [ -d "$JAVA_HOME" ]; then
 fi
 java -version 2>&1 | head -2 || echo "WARN: java not on PATH"
 
+# Prevent OOM during heavy native (BoringSSL) compilation. GitHub runners ship
+# ~7GB RAM and no swap; the newer BoringSSL (post-quantum crypto) gets
+# SIGKILL'd by the OOM killer mid-build (log ends abruptly at e.g. [474/639]).
+# Add a swap file and cap CMake parallelism so the build is reliable.
+if ! sudo swapon --show | grep -q swapfile; then
+  echo "== Adding 16GB swap to avoid OOM during native build =="
+  sudo fallocate -l 16G /swapfile 2>/dev/null || sudo dd if=/dev/zero of=/swapfile bs=1M count=16384 status=none
+  sudo chmod 600 /swapfile
+  sudo mkswap /swapfile >/dev/null 2>&1
+  sudo swapon /swapfile 2>/dev/null || true
+fi
+free -h 2>/dev/null | head -3 || true
+export CMAKE_BUILD_PARALLEL_LEVEL="${CMAKE_BUILD_PARALLEL_LEVEL:-2}"
+
 export ANDROID_HOME="${ANDROID_HOME:-$HOME/Android/Sdk}"
 SDKMGR="sdkmanager"
 if [ -x "${ANDROID_HOME}/cmdline-tools/latest/bin/sdkmanager" ]; then
