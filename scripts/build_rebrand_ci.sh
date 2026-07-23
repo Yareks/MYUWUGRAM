@@ -35,7 +35,7 @@ curl -fSL --retry 3 -o nagram.apk "$NAGRAM_APK_URL"
 ls -lah nagram.apk
 
 echo "STEP 4/7: apktool decode (resources only; dex kept as-is)"
-java -jar "$APKTOOL_JAR" d -f -s --force-manifest nagram.apk -o app
+java -jar "$APKTOOL_JAR" d -f -s nagram.apk -o app
 echo "  decoded to: $(ls -d app 2>/dev/null)"
 
 echo "STEP 5/7: rebrand display name Nagram -> ${APP_LABEL}"
@@ -78,5 +78,20 @@ if [ "$code" -ne 0 ]; then
   echo "Rebrand failed with exit code $code" | tee -a "$LOG_FILE"
   # Ensure there is always an artifact to inspect (the workflow uploads *.apk).
   tail -500 "$LOG_FILE" > "$LOG_DIR/BUILD_FAILED_LOG_NOT_AN_INSTALLABLE_APK.apk"
+  # Surface the error in the run summary so it's visible on the run page without
+  # downloading the artifact (Azure log storage is unreachable for some agents).
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    {
+      echo "### Rebrand failed (exit $code)"
+      echo "Last log lines:"
+      echo '```'
+      tail -40 "$LOG_FILE"
+      echo '```'
+    } >> "$GITHUB_STEP_SUMMARY"
+  fi
   exit 0
+fi
+# Success: note it in the run summary too.
+if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+  echo "### MeowGram rebrand OK -> zastogram-output/meowgram.apk" >> "$GITHUB_STEP_SUMMARY"
 fi
