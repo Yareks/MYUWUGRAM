@@ -14,7 +14,7 @@ set -euo pipefail
 # one-line change to the default below (no workflow edit, which the Arena token
 # cannot do).
 
-CLIENT="${MEOWGRAM_CLIENT:-rebrand}"
+CLIENT="${MEOWGRAM_CLIENT:-nagram}"
 DIR="$(cd "$(dirname "$0")" && pwd)"
 
 case "$CLIENT" in

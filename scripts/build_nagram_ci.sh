@@ -152,21 +152,30 @@ printf '#!/bin/bash\nexec "%s" -j2 "$@"\n' "$REAL_NINJA" > /tmp/ninja-j2.sh
 chmod +x /tmp/ninja-j2.sh
 export NINJA_PATH="/tmp/ninja-j2.sh"
 export PATH="$ANDROID_HOME/ndk/27.2.12479018/toolchains/llvm/prebuilt/linux-x86_64/bin:$PATH"
+
+echo "== MeowGram: native build starting =="
+echo "  nproc=$(nproc)"
+free -h 2>/dev/null | head -3 || true
+df -h / 2>/dev/null | head -2 || true
+
 cd TMessagesProj/jni
 
 # Make sure the submodules are present (recursive clone should have done it, but
 # be safe; these are no-ops if already checked out).
 git submodule update --init ffmpeg libvpx boringssl 2>/dev/null || true
 
-echo "== build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES} =="
+echo "== STEP: build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES} =="
 ./build_libvpx_clang.sh ${BUILD_NATIVE_ARCHES}
-echo "== build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES} =="
+echo "== STEP: build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES} =="
 ./build_ffmpeg_clang.sh ${BUILD_NATIVE_ARCHES}
 ./patch_ffmpeg.sh
-echo "== patch_boringssl.sh =="
+echo "== STEP: patch_boringssl.sh =="
 ./patch_boringssl.sh
-echo "== build_boringssl.sh ${BUILD_NATIVE_ARCHES} =="
+echo "== STEP: build_boringssl.sh ${BUILD_NATIVE_ARCHES} (heavy, OOM-prone) =="
 ./build_boringssl.sh ${BUILD_NATIVE_ARCHES}
+echo "== after boringssl =="
+free -h 2>/dev/null | head -3 || true
+df -h / 2>/dev/null | head -2 || true
 cd ../..
 
 echo "== gradlew assembleAfatDebug =="
@@ -211,28 +220,18 @@ set -e
 if [ "$code" -ne 0 ]; then
   echo "Build failed with exit code $code" | tee -a "$LOG_FILE"
   tail -500 "$LOG_FILE" > "$LOG_DIR/BUILD_FAILED_LOG_NOT_AN_INSTALLABLE_APK.apk"
-
-  # Diagnostics: CI log/artifact storage is unreachable from the agent's side,
-  # so push the build log to the 'meowgram-diag' branch so it can be read via
-  # the GitHub contents API. Best-effort (no-op if the token can't push).
-  WS="${GITHUB_WORKSPACE:-$(pwd)}"
-  if [ -d "$WS/.git" ]; then
-    (
-      cd "$WS" || exit 0
-      cp "$LOG_FILE" ./meowgram-last-build.log 2>/dev/null || true
-      git config user.email "meowgram@diag.local" 2>/dev/null || true
-      git config user.name "MeowGram Diag" 2>/dev/null || true
-      git fetch origin meowgram-diag 2>/dev/null || true
-      if git show-ref --verify --quiet refs/remotes/origin/meowgram-diag; then
-        git checkout -B meowgram-diag origin/meowgram-diag 2>/dev/null || exit 0
-      else
-        git checkout --orphan meowgram-diag 2>/dev/null || exit 0
-        git rm -rf --cached . 2>/dev/null || true
-      fi
-      git add -f meowgram-last-build.log 2>/dev/null || true
-      git commit -m "diag: nagram build log (exit $code)" 2>/dev/null || true
-      git push --force origin meowgram-diag 2>/dev/null || echo "(diag push skipped - no write permission)"
-    ) || true
+  # Surface the failure on the run page (no artifact download needed): memory,
+  # disk, OOM-killer messages from dmesg, and the last 80 log lines.
+  if [ -n "${GITHUB_STEP_SUMMARY:-}" ]; then
+    {
+      echo "### Nagram build failed (exit $code)"
+      echo "**Memory:**"; echo '```'; free -h 2>/dev/null | head -3 || true; echo '```'
+      echo "**Disk (/):**"; echo '```'; df -h / 2>/dev/null | head -2 || true; echo '```'
+      echo "**OOM killer (dmesg):**"; echo '```'
+      { dmesg 2>/dev/null || sudo dmesg 2>/dev/null; } | grep -iE "killed process|out of memory|oom-kill|invoked oom" | tail -10 || echo "(none / dmesg unavailable)"
+      echo '```'
+      echo "**Last 80 log lines:**"; echo '```'; tail -80 "$LOG_FILE"; echo '```'
+    } >> "$GITHUB_STEP_SUMMARY"
   fi
   exit 0
 fi
