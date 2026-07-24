@@ -179,6 +179,15 @@ df -h / 2>/dev/null | head -2 || true
 cd ../..
 
 echo "== gradlew assembleAfatDebug =="
+
+# Nagram ships settings.gradle WITHOUT the app module included (only the
+# TMessagesProj library + openpgp-api), so the 'assembleAfatDebug' task doesn't
+# exist. Include the app module (and uncomment any //include lines, matching
+# Nagram's own CI sed) so the APK-producing task is available.
+sed -i 's|//include|include|g' settings.gradle
+grep -q "include ':TMessagesProj_App'" settings.gradle || echo "include ':TMessagesProj_App'" >> settings.gradle
+echo "--- settings.gradle ---"; cat settings.gradle
+
 ./gradlew --no-daemon -Pandroid.injected.build.abi=${BUILD_ANDROID_ABI} assembleAfatDebug
 
 # Collect the APK and make it install-friendly (zipalign + apksigner v1+v2+v3).
