@@ -126,8 +126,11 @@ echo "== STEP: build_boringssl.sh ${BUILD_NATIVE_ARCHES} (heavy) =="
 ./build_boringssl.sh ${BUILD_NATIVE_ARCHES}
 cd ../..
 
-echo "== STEP: gradlew :TMessagesProj:assembleDebug (arm64) =="
-./gradlew --no-daemon -Pandroid.injected.build.abi=${BUILD_ANDROID_ABI} :TMessagesProj:assembleDebug
+echo "== STEP: gradlew :TMessagesProj:assembleRelease (arm64) =="
+# Release (not Debug): a debug build has android:debuggable=true, which Infinix
+# XOS / Play Protect reject on direct sideload as 'package damaged' even though
+# the APK is valid. Release is non-debuggable and installs like the rebrand APK.
+./gradlew --no-daemon -Pandroid.injected.build.abi=${BUILD_ANDROID_ABI} :TMessagesProj:assembleRelease
 
 mkdir -p ../zastogram-output
 find . -name '*.apk' -print
