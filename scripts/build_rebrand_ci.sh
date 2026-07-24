@@ -65,7 +65,6 @@ fi
   --v1-signing-enabled true --v2-signing-enabled true --v3-signing-enabled true \
   --in meowgram-aligned.apk --out "${LOG_DIR}/meowgram.apk"
 "${BUILD_TOOLS}/apksigner" verify "${LOG_DIR}/meowgram.apk" >/dev/null 2>&1 && echo "  apksigner verify OK" || echo "  apksigner verify: non-fatal"
-cp "${LOG_DIR}/meowgram.apk" "${LOG_DIR}/meowgram-arm64-debug.apk"
 ls -lah "$LOG_DIR"
 echo "RESULT: ok"
 }
