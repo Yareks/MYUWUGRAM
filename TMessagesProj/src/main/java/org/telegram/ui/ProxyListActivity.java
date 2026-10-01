@@ -105,6 +105,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private int rotationTimeoutRow;
     private int rotationTimeoutInfoRow;
     private int deleteAllRow;
+    private int freshProxiesHeaderRow;
+    private int fetchProxiesRow;
+    private int exportProxiesRow;
+    private int freshProxiesShadowRow;
 
     private ItemTouchHelper itemTouchHelper;
     private NumberTextView selectedCountTextView;
@@ -529,6 +533,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     textCheckCell.setChecked(true);
                 }
                 ConnectionsManager.setProxySettings(useProxySettings, SharedConfig.currentProxy.settings);
+            } else if (position == fetchProxiesRow) {
+                fetchFreshProxiesList();
+            } else if (position == exportProxiesRow) {
+                exportProxiesToSavedMessages();
             } else if (position == proxyAddRow) {
                 presentFragment(new ProxySettingsActivity());
             } else if (position == deleteAllRow) {
@@ -730,10 +738,134 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         } else {
             deleteAllRow = -1;
         }
+        freshProxiesHeaderRow = rowCount++;
+        fetchProxiesRow = rowCount++;
+        exportProxiesRow = rowCount++;
+        freshProxiesShadowRow = rowCount++;
         checkProxyList();
         if (notify && listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
+    }
+
+    // ---- MYUWUGRAM: свежие списки прокси ----
+
+    /** Источник списков: текстовый файл со ссылками tg://proxy по одной на строку. */
+    private static final String FRESH_PROXIES_URL = "https://gitverse.ru/api/repos/Akres/Proxy/raw/branch/master/proxies.txt";
+
+    private void fetchFreshProxiesList() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        org.telegram.ui.Components.BulletinFactory.of(this)
+                .createSimpleBulletin(R.raw.chats_infotip, getString(R.string.OEProxyFetchLoading))
+                .show();
+        new Thread(() -> {
+            String body = null;
+            try {
+                java.net.HttpURLConnection conn = (java.net.HttpURLConnection) new java.net.URL(FRESH_PROXIES_URL).openConnection();
+                conn.setConnectTimeout(15000);
+                conn.setReadTimeout(15000);
+                java.io.BufferedReader reader = new java.io.BufferedReader(
+                        new java.io.InputStreamReader(conn.getInputStream(), java.nio.charset.StandardCharsets.UTF_8));
+                StringBuilder sb = new StringBuilder();
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append('\n');
+                }
+                reader.close();
+                conn.disconnect();
+                body = sb.toString();
+            } catch (Throwable t) {
+                org.telegram.messenger.FileLog.e(t);
+            }
+            final String raw = body;
+            AndroidUtilities.runOnUIThread(() -> applyFetchedProxies(raw));
+        }, "proxy-list-fetch").start();
+    }
+
+    private void applyFetchedProxies(String raw) {
+        if (raw == null) {
+            org.telegram.ui.Components.BulletinFactory.of(this)
+                    .createSimpleBulletin(R.raw.chats_infotip, getString(R.string.OEProxyFetchError))
+                    .show();
+            return;
+        }
+        java.util.HashSet<String> existing = new java.util.HashSet<>();
+        for (SharedConfig.ProxyInfo info : SharedConfig.proxyList) {
+            existing.add(info.address + ":" + info.port + ":" + (info.secret != null ? info.secret : ""));
+        }
+        int added = 0;
+        int duplicates = 0;
+        for (String line : raw.split("\n")) {
+            line = line.trim();
+            if (!line.startsWith("tg://proxy")) {
+                continue;
+            }
+            try {
+                android.net.Uri uri = android.net.Uri.parse(line);
+                String host = uri.getQueryParameter("server");
+                String portStr = uri.getQueryParameter("port");
+                String secret = uri.getQueryParameter("secret");
+                if (host == null || host.isEmpty() || portStr == null) {
+                    continue;
+                }
+                int port = Integer.parseInt(portStr);
+                String key = host + ":" + port + ":" + (secret != null ? secret : "");
+                if (existing.contains(key)) {
+                    duplicates++;
+                    continue;
+                }
+                SharedConfig.addProxy(new SharedConfig.ProxyInfo(host, port, "", "", secret != null ? secret : ""));
+                existing.add(key);
+                added++;
+            } catch (Throwable t) {
+                org.telegram.messenger.FileLog.e(t);
+            }
+        }
+        updateRows(true);
+        String msg = added > 0
+                ? LocaleController.formatString(R.string.OEProxyFetchAdded, added, duplicates)
+                : getString(R.string.OEProxyFetchNoNew);
+        org.telegram.ui.Components.BulletinFactory.of(this)
+                .createSimpleBulletin(R.raw.chats_infotip, msg)
+                .show();
+    }
+
+    private void exportProxiesToSavedMessages() {
+        SharedConfig.loadProxyList();
+        if (SharedConfig.proxyList.isEmpty()) {
+            org.telegram.ui.Components.BulletinFactory.of(this)
+                    .createSimpleBulletin(R.raw.chats_infotip, getString(R.string.OEProxyExportNone))
+                    .show();
+            return;
+        }
+        java.util.ArrayList<String> lines = new java.util.ArrayList<>();
+        for (SharedConfig.ProxyInfo proxy : SharedConfig.proxyList) {
+            StringBuilder sb = new StringBuilder("tg://proxy?server=").append(proxy.address).append("&port=").append(proxy.port);
+            if (!android.text.TextUtils.isEmpty(proxy.secret)) {
+                sb.append("&secret=").append(proxy.secret);
+            }
+            lines.add(sb.toString());
+        }
+        java.util.Collections.sort(lines);
+        String text = android.text.TextUtils.join("\n", lines);
+
+        org.telegram.tgnet.TLRPC.TL_messageEntityBlockquote quote = new org.telegram.tgnet.TLRPC.TL_messageEntityBlockquote();
+        quote.collapsed = true;
+        quote.offset = 0;
+        quote.length = text.length();
+
+        org.telegram.messenger.SendMessagesHelper.SendMessageParams params =
+                org.telegram.messenger.SendMessagesHelper.SendMessageParams.of(
+                        text, org.telegram.messenger.UserConfig.getInstance(getCurrentAccount()).getClientUserId());
+        params.entities = new java.util.ArrayList<>();
+        params.entities.add(quote);
+        org.telegram.messenger.SendMessagesHelper.getInstance(getCurrentAccount()).sendMessage(params);
+
+        org.telegram.ui.Components.BulletinFactory.of(this)
+                .createSimpleBulletin(R.raw.chats_infotip, LocaleController.formatString(R.string.OEProxyExported, lines.size()))
+                .show();
     }
 
     private void checkProxyList() {
@@ -913,6 +1045,10 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     textCell.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
                     if (position == proxyAddRow) {
                         textCell.setText(getString(R.string.AddProxy), deleteAllRow != -1);
+                    } else if (position == fetchProxiesRow) {
+                        textCell.setTextAndIcon(getString(R.string.OEProxyFetchList), R.drawable.msg_download, true);
+                    } else if (position == exportProxiesRow) {
+                        textCell.setTextAndIcon(getString(R.string.OEProxyExport), R.drawable.msg_share, false);
                     } else if (position == deleteAllRow) {
                         textCell.setTextColor(Theme.getColor(Theme.key_text_RedRegular));
                         textCell.setText(getString(R.string.DeleteAllProxies), false);
@@ -923,6 +1059,8 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     HeaderCell headerCell = (HeaderCell) holder.itemView;
                     if (position == connectionsHeaderRow) {
                         headerCell.setText(getString(R.string.ProxyConnections));
+                    } else if (position == freshProxiesHeaderRow) {
+                        headerCell.setText(getString(R.string.OEProxyFreshHeader));
                     }
                     break;
                 }
@@ -1010,7 +1148,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == useProxyRow || position == rotationRow || position == proxyAddRow || position == deleteAllRow || position >= proxyStartRow && position < proxyEndRow;
+            return position == useProxyRow || position == rotationRow || position == proxyAddRow || position == deleteAllRow || position == fetchProxiesRow || position == exportProxiesRow || position >= proxyStartRow && position < proxyEndRow;
         }
 
         @Override
@@ -1084,6 +1222,14 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 return -10;
             } else if (position == rotationTimeoutInfoRow) {
                 return -11;
+            } else if (position == freshProxiesHeaderRow) {
+                return -12;
+            } else if (position == fetchProxiesRow) {
+                return -13;
+            } else if (position == exportProxiesRow) {
+                return -14;
+            } else if (position == freshProxiesShadowRow) {
+                return -15;
             } else if (position >= proxyStartRow && position < proxyEndRow) {
                 return proxyList.get(position - proxyStartRow).hashCode();
             } else {
@@ -1093,13 +1239,13 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
 
         @Override
         public int getItemViewType(int position) {
-            if (position == useProxyShadowRow || position == proxyShadowRow) {
+            if (position == useProxyShadowRow || position == proxyShadowRow || position == freshProxiesShadowRow) {
                 return VIEW_TYPE_SHADOW;
-            } else if (position == proxyAddRow || position == deleteAllRow) {
+            } else if (position == proxyAddRow || position == deleteAllRow || position == fetchProxiesRow || position == exportProxiesRow) {
                 return VIEW_TYPE_TEXT_SETTING;
             } else if (position == useProxyRow || position == rotationRow) {
                 return VIEW_TYPE_TEXT_CHECK;
-            } else if (position == connectionsHeaderRow) {
+            } else if (position == connectionsHeaderRow || position == freshProxiesHeaderRow) {
                 return VIEW_TYPE_HEADER;
             } else if (position == rotationTimeoutRow) {
                 return VIEW_TYPE_SLIDE_CHOOSER;

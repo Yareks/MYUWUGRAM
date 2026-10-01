@@ -78,6 +78,11 @@ object AppearanceConfig {
     val titleText =
         addConfig("OEAppearanceTitleText", ConfigItem.configTypeInt, 0)
 
+    /** Затемнение фона бокового меню, проценты 0-70. 0 — выключено. */
+    @JvmField
+    val drawerBackgroundDim =
+        addConfig("OEAppearanceDrawerBgDim", ConfigItem.configTypeInt, 0)
+
     /**
      * Какой набор темы Monet берут «Monet Light/Dark/AMOLED».
      *

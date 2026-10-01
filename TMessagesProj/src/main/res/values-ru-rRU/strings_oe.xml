@@ -49,4 +49,14 @@
     <string name="MainTabsHideProfile">Скрыть вкладку профиля</string>
     <string name="OENowPlayingScrobbling">Сейчас играет</string>
     <string name="OEBotWebViewUpdate">Обновить WebView</string>
+
+    <string name="OEProxyFreshHeader">Свежие прокси</string>
+    <string name="OEProxyFetchList">Получить новый список</string>
+    <string name="OEProxyExport">Экспортировать прокси</string>
+    <string name="OEProxyFetchLoading">Загружаем список прокси…</string>
+    <string name="OEProxyFetchError">Ошибка загрузки. Проверьте соединение.</string>
+    <string name="OEProxyFetchAdded">Добавлено: %1$d. Уже было: %2$d.</string>
+    <string name="OEProxyFetchNoNew">Новых прокси в списке нет.</string>
+    <string name="OEProxyExportNone">Нет прокси для экспорта.</string>
+    <string name="OEProxyExported">Экспортировано %1$d прокси в Избранное.</string>
 </resources>

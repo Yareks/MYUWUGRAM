@@ -59,4 +59,14 @@
     <string name="MainTabsHideCallsSettings">Hide Calls tab</string>
     <string name="MainTabsHideProfile">Hide Profile tab</string>
     <string name="OEBotWebViewUpdate">Update WebView</string>
+
+    <string name="OEProxyFreshHeader">Fresh proxies</string>
+    <string name="OEProxyFetchList">Fetch new list</string>
+    <string name="OEProxyExport">Export proxies</string>
+    <string name="OEProxyFetchLoading">Loading proxy list…</string>
+    <string name="OEProxyFetchError">Download error. Check your connection.</string>
+    <string name="OEProxyFetchAdded">Added: %1$d. Already had: %2$d.</string>
+    <string name="OEProxyFetchNoNew">No new proxies in the list.</string>
+    <string name="OEProxyExportNone">No proxies to export.</string>
+    <string name="OEProxyExported">Exported %1$d proxies to Saved Messages.</string>
 </resources>

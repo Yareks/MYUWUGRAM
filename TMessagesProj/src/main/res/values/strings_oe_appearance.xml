@@ -140,4 +140,19 @@
     <string name="OEProfileMusicUseOfficialInfo">Show the track under the avatar, like in the official app?</string>
     <string name="OEProfileMusicUseCard">Card</string>
     <string name="OEProfileMusicUseCardInfo">Show the track as a card below the profile header?</string>
+
+    <string name="OEAppearanceProfileDrawer">Profile &amp; side menu</string>
+    <string name="OEAppearanceProfileDrawerSub">Drawer background, dim, phone number</string>
+    <string name="OEProfileDrawerTitle">Profile &amp; side menu</string>
+    <string name="OEProfileDrawerSectionDrawer">Side menu</string>
+    <string name="OEProfileDrawerSectionProfile">Profile</string>
+    <string name="OEProfileDrawerBackground">Drawer background image</string>
+    <string name="OEProfileDrawerBackgroundDefault">Default</string>
+    <string name="OEProfileDrawerBackgroundCustom">Custom image</string>
+    <string name="OEProfileDrawerPickImage">Choose image</string>
+    <string name="OEProfileDrawerResetBackground">Reset background</string>
+    <string name="OEProfileDrawerDim">Background dim</string>
+    <string name="OEProfileDrawerDimOff">Off</string>
+    <string name="OEProfileDrawerHidePhone">Hide phone number in drawer</string>
+    <string name="OEProfileDrawerInfo">Background is re-created when the app restarts or the theme changes; hiding the number applies on next drawer open.</string>
 </resources>

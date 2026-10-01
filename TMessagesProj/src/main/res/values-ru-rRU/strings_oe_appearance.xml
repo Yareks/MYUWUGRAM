@@ -131,4 +131,19 @@
     <string name="OEProfileMusicUseOfficialInfo">Показывать трек под аватаркой, как в официальном клиенте?</string>
     <string name="OEProfileMusicUseCard">Карточкой</string>
     <string name="OEProfileMusicUseCardInfo">Показывать трек карточкой под шапкой профиля?</string>
+
+    <string name="OEAppearanceProfileDrawer">Профиль и боковое меню</string>
+    <string name="OEAppearanceProfileDrawerSub">Фон шторки, затемнение, номер телефона</string>
+    <string name="OEProfileDrawerTitle">Профиль и боковое меню</string>
+    <string name="OEProfileDrawerSectionDrawer">Боковое меню</string>
+    <string name="OEProfileDrawerSectionProfile">Профиль</string>
+    <string name="OEProfileDrawerBackground">Фоновая картинка шторки</string>
+    <string name="OEProfileDrawerBackgroundDefault">По умолчанию</string>
+    <string name="OEProfileDrawerBackgroundCustom">Своя картинка</string>
+    <string name="OEProfileDrawerPickImage">Выбрать картинку</string>
+    <string name="OEProfileDrawerResetBackground">Сбросить фон</string>
+    <string name="OEProfileDrawerDim">Затемнение фона</string>
+    <string name="OEProfileDrawerDimOff">Выкл</string>
+    <string name="OEProfileDrawerHidePhone">Скрывать номер телефона в шторке</string>
+    <string name="OEProfileDrawerInfo">Фон пересоздаётся после перезапуска или смены темы; скрытие номера — при следующем открытии шторки.</string>
 </resources>

@@ -98,6 +98,34 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
             };
 
     private final FrameLayout drawerPanel;
+    /** Активный контейнер — нужен для живого обновления фона из экрана настроек. */
+    private static DrawerContainer activeContainer;
+
+    /**
+     * Панели ставится цвет темы, своя картинка и/или затемнение — в зависимости от
+     * настроек «Профиль и боковое меню». Без кастомизации поведение прежнее.
+     */
+    public static void applyDrawerBackground(FrameLayout drawerPanel) {
+        String path = AppearanceConfig.getPreferences().getString("OEAppearanceDrawerBgPath", null);
+        if (path != null && !new java.io.File(path).exists()) {
+            path = null;
+        }
+        final int dim = AppearanceConfig.drawerBackgroundDim.Int();
+        if (path == null && dim <= 0) {
+            drawerPanel.setBackgroundColor(Theme.getColor(COLOR_KEY_DRAWER_BACKGROUND));
+        } else {
+            drawerPanel.setBackground(new DrawerBackgroundDrawable(path, dim));
+        }
+    }
+
+    /** Пересоздать фон уже живой шторки; вызывается из «Профиль и боковое меню». */
+    public static void refreshActiveDrawerBackground() {
+        final DrawerContainer container = activeContainer;
+        if (container != null) {
+            AndroidUtilities.runOnUIThread(() -> applyDrawerBackground(container.drawerPanel));
+        }
+    }
+
     private final FrameLayout bulletinContainer;
     private final DrawerHeaderView headerView;
     private final DrawerAccountPickerView accountPickerView;
@@ -141,7 +169,8 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
         drawerWidth = calculateDrawerWidth();
 
         drawerPanel = new FrameLayout(context);
-        drawerPanel.setBackgroundColor(Theme.getColor(COLOR_KEY_DRAWER_BACKGROUND));
+        applyDrawerBackground(drawerPanel);
+        activeContainer = this;
         drawerPanel.setTranslationX(-drawerWidth);
         addView(drawerPanel, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT));
         final FrameLayout.LayoutParams panelParams = (FrameLayout.LayoutParams) drawerPanel.getLayoutParams();
@@ -972,7 +1001,7 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
     }
 
     private void updateColors() {
-        drawerPanel.setBackgroundColor(Theme.getColor(COLOR_KEY_DRAWER_BACKGROUND));
+        applyDrawerBackground(drawerPanel);
         headerView.updateColors();
         accountPickerView.updateColors();
         menuView.updateColors();

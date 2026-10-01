@@ -150,6 +150,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     // Links
     private int linksHeaderRow;
     private int appNavigationRow;
+    private int profileDrawerRow;
     private int iconPacksRow;
     private int emojiSetsRow;
     private int pillStackRow;
@@ -215,6 +216,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         // до секции общего вида.
         linksHeaderRow = addRow("linksHeader");
         appNavigationRow = addRow("appNavigation");
+        profileDrawerRow = addRow("profileDrawer");
         iconPacksRow = addRow("iconPacks");
         emojiSetsRow = addRow("emojiSets", "EmojiSets");
         pillStackRow = addRow("pillStack");
@@ -572,6 +574,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == appNavigationRow) {
             presentFragment(new OpenExteraAppNavigationActivity());
+            return;
+        } else if (position == profileDrawerRow) {
+            presentFragment(new OpenExteraProfileDrawerActivity());
             return;
         } else if (position == emojiSetsRow) {
             presentFragment(new NekoEmojiSettingsActivity());
@@ -1106,6 +1111,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     TextDetailSettingsCell cell = (TextDetailSettingsCell) holder.itemView;
                     if (position == appNavigationRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.OEAppearanceNavigation), getString(R.string.OEAppearanceNavigationSub), R.drawable.msg_newphone, true);
+                    } else if (position == profileDrawerRow) {
+                        cell.setTextAndValueAndIcon(getString(R.string.OEAppearanceProfileDrawer), getString(R.string.OEAppearanceProfileDrawerSub), R.drawable.msg_openprofile, true);
                     } else if (position == iconPacksRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.OEAppearanceIconPacks), getString(R.string.OEAppearanceIconPacksInfo), R.drawable.msg_sticker, true);
                     } else if (position == emojiSetsRow) {
@@ -1179,7 +1186,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_INFO_PRIVACY;
             } else if (position == fabShapeRow) {
                 return TYPE_FAB_SHAPE;
-            } else if (position == appNavigationRow || position == iconPacksRow
+            } else if (position == appNavigationRow || position == profileDrawerRow || position == iconPacksRow
                     || position == emojiSetsRow || position == pillStackRow) {
                 return TYPE_DETAIL_SETTINGS;
             } else if (position == md3GroupRow || position == hideAiGroupRow
