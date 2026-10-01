@@ -167,11 +167,13 @@ android {
         def glyphKey = 'test'
 
         if (properties != null) {
-            appId = properties.getProperty('TELEGRAM_APP_ID') ?: System.getenv('TELEGRAM_APP_ID') ?: appId
-            appHash = properties.getProperty('TELEGRAM_APP_HASH') ?: System.getenv('TELEGRAM_APP_HASH') ?: appHash
+            appId = properties.getProperty('TELEGRAM_APP_ID') ?: properties.getProperty('ZASTOGRAM_APP_ID') ?: properties.getProperty('APP_ID') ?: properties.getProperty('TG_API_ID') ?: System.getenv('TELEGRAM_APP_ID') ?: System.getenv('ZASTOGRAM_APP_ID') ?: System.getenv('APP_ID') ?: System.getenv('TG_API_ID') ?: appId
+            appHash = properties.getProperty('TELEGRAM_APP_HASH') ?: properties.getProperty('ZASTOGRAM_APP_HASH') ?: properties.getProperty('APP_HASH') ?: properties.getProperty('TG_API_HASH') ?: System.getenv('TELEGRAM_APP_HASH') ?: System.getenv('ZASTOGRAM_APP_HASH') ?: System.getenv('APP_HASH') ?: System.getenv('TG_API_HASH') ?: appHash
             mapsKey = properties.getProperty('MAPS_API_KEY') ?: System.getenv('MAPS_API_KEY') ?: mapsKey
             glyphKey = properties.getProperty('GLYPH_API_KEY') ?: System.getenv('GLYPH_API_KEY') ?: glyphKey
         } else {
+            appId = System.getenv('TELEGRAM_APP_ID') ?: System.getenv('ZASTOGRAM_APP_ID') ?: System.getenv('APP_ID') ?: System.getenv('TG_API_ID') ?: appId
+            appHash = System.getenv('TELEGRAM_APP_HASH') ?: System.getenv('ZASTOGRAM_APP_HASH') ?: System.getenv('APP_HASH') ?: System.getenv('TG_API_HASH') ?: appHash
             mapsKey = System.getenv('MAPS_API_KEY') ?: mapsKey
             glyphKey = System.getenv('GLYPH_API_KEY') ?: glyphKey
         }

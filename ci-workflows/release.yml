@@ -92,8 +92,16 @@ jobs:
         id: release_build_step
         env:
           COMMIT_ID: ${{ github.event.head_commit.id || github.sha }}
+          TELEGRAM_APP_ID: ${{ secrets.TELEGRAM_APP_ID || secrets.ZASTOGRAM_APP_ID || secrets.TG_API_ID || secrets.APP_ID }}
+          TELEGRAM_APP_HASH: ${{ secrets.TELEGRAM_APP_HASH || secrets.ZASTOGRAM_APP_HASH || secrets.TG_API_HASH || secrets.APP_HASH }}
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
+          if [ -n "$TELEGRAM_APP_ID" ]; then
+            echo "TELEGRAM_APP_ID=$TELEGRAM_APP_ID" >> local.properties
+          fi
+          if [ -n "$TELEGRAM_APP_HASH" ]; then
+            echo "TELEGRAM_APP_HASH=$TELEGRAM_APP_HASH" >> local.properties
+          fi
           export BUILD_TIMESTAMP=$(date +%s)
           echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
           ./gradlew TMessagesProj:assembleRelease
