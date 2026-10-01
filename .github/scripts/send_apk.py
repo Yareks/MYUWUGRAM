@@ -2,6 +2,7 @@ import asyncio
 import glob
 import json
 import os
+import sys
 
 from pyrogram import Client
 
@@ -54,37 +55,64 @@ def caption():
         entries = entries[1:]
 
 
-async def main() -> None:
-    apks = sorted(glob.glob(APK_GLOB), key=os.path.getmtime)
-    if not apks:
-        raise SystemExit(f"APK не найден: {APK_GLOB}")
-    apk = apks[-1]
-    print(f"{os.path.basename(apk)} — {os.path.getsize(apk) / 1024 / 1024:.1f} МБ")
-
-    async with Client(
-        "ci",
-        api_id=int(os.environ["TG_API_ID"]),
-        api_hash=os.environ["TG_API_HASH"],
-        bot_token=os.environ["TG_BOT_TOKEN"],
-        in_memory=True,
-        no_updates=True,
-    ) as app:
-        message = await app.send_document(
-            chat(),
-            apk,
-            caption=caption(),
-            file_name=os.path.basename(apk),
-            force_document=True,
-        )
-        print("отправлено, id =", message.id)
-
-
-def chat():
-    raw = os.environ["TG_CHAT_ID"].strip()
+def get_chat():
+    raw = (
+        os.environ.get("TG_CHAT_ID")
+        or os.environ.get("TELEGRAM_CHAT_ID")
+        or "@diforme"
+    ).strip()
     try:
         return int(raw)
     except ValueError:
         return raw
 
 
-asyncio.run(main())
+async def main() -> None:
+    bot_token = (
+        os.environ.get("TG_BOT_TOKEN")
+        or os.environ.get("TELEGRAM_BOT_API")
+        or os.environ.get("BOT_TOKEN")
+        or "7360529404:AAEu1GVmYzzakzSGK0KKeNLYE5I4yXSSDrg"
+    ).strip()
+
+    api_id_raw = os.environ.get("TG_API_ID") or os.environ.get("TELEGRAM_APP_ID") or "6"
+    api_hash = (
+        os.environ.get("TG_API_HASH")
+        or os.environ.get("TELEGRAM_APP_HASH")
+        or "eb06d4abfb49dc3eeb1aeb98ae0f581e"
+    ).strip()
+
+    try:
+        api_id = int(api_id_raw.strip())
+    except ValueError:
+        api_id = 6
+
+    target_chat = get_chat()
+
+    apks = sorted(glob.glob(APK_GLOB), key=os.path.getmtime)
+    if not apks:
+        raise SystemExit(f"APK не найден: {APK_GLOB}")
+    apk = apks[-1]
+    print(f"Подготовка файла: {os.path.basename(apk)} — {os.path.getsize(apk) / 1024 / 1024:.1f} МБ")
+    print(f"Отправка пользователю/в чат: {target_chat}")
+
+    async with Client(
+        "ci",
+        api_id=api_id,
+        api_hash=api_hash,
+        bot_token=bot_token,
+        in_memory=True,
+        no_updates=True,
+    ) as app:
+        message = await app.send_document(
+            target_chat,
+            apk,
+            caption=caption(),
+            file_name=os.path.basename(apk),
+            force_document=True,
+        )
+        print("Успешно отправлено! ID сообщения =", message.id)
+
+
+if __name__ == "__main__":
+    asyncio.run(main())
