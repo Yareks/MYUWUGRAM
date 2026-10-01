@@ -212,6 +212,24 @@ public class NekoConfig {
 
     public static void init() {
         loadConfig(false);
+        purgeLegacyGhostFlags();
+    }
+
+    /**
+     * Режим призрака вырезан из клиента: разово приводим его флаги к обычным
+     * значениям (читать/писать/онлайн — как в стоке), чтобы у людей после
+     * обновления не осталось скрытого поведения.
+     */
+    private static void purgeLegacyGhostFlags() {
+        try {
+            sendReadMessagePackets.setConfigBool(true);
+            sendReadStoriesPackets.setConfigBool(true);
+            sendOnlinePackets.setConfigBool(true);
+            sendUploadProgress.setConfigBool(true);
+            sendOfflinePacketAfterOnline.setConfigBool(false);
+            markReadAfterSend.setConfigBool(false);
+        } catch (Throwable ignore) {
+        }
     }
 
     public static ConfigItem addConfig(String k, int t, Object d) {
@@ -311,6 +329,10 @@ public class NekoConfig {
 
     // --- Ghost Mode ---
     public static boolean isGhostModeActive() {
+        // Режим призрака вырезан из клиента.
+        if (true) {
+            return false;
+        }
         for (Pair<ConfigItem, ConfigItem> pair : ghostToggleItems) {
             ConfigItem item = pair.first;
             ConfigItem lockedItem = pair.second;
@@ -327,6 +349,10 @@ public class NekoConfig {
     }
 
     public static void setGhostMode(boolean enabled) {
+        // Режим призрака вырезан из клиента: метод специально оставлен пустым.
+        if (true) {
+            return;
+        }
         for (Pair<ConfigItem, ConfigItem> pair : ghostToggleItems) {
             ConfigItem item = pair.first;
             ConfigItem lockedItem = pair.second;
@@ -338,6 +364,9 @@ public class NekoConfig {
     }
 
     public static void toggleGhostMode() {
+        if (true) {
+            return;
+        }
         boolean newState = !isGhostModeActive();
         setGhostMode(newState);
 

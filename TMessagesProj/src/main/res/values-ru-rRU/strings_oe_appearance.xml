@@ -146,4 +146,10 @@
     <string name="OEProfileDrawerDimOff">Выкл</string>
     <string name="OEProfileDrawerHidePhone">Скрывать номер телефона в шторке</string>
     <string name="OEProfileDrawerInfo">Фон пересоздаётся после перезапуска или смены темы; скрытие номера — при следующем открытии шторки.</string>
+    <!-- Баннер-фон страницы профиля -->
+    <string name="OEProfileBannerPick">Фон профиля</string>
+    <string name="OEProfileBannerReset">Сбросить фон профиля</string>
+    <string name="OEProfileBannerDim">Затемнение фона профиля</string>
+    <string name="OEProfileBannerInfo">Выбранная картинка станет фоном шапки страницы профиля вместо обычной заливки.</string>
+    <string name="OEProfileDrawerSectionDrawer2">Профиль</string>
 </resources>

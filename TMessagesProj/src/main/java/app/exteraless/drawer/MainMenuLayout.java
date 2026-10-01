@@ -93,7 +93,7 @@ public final class MainMenuLayout {
     public static List<Integer> getAllItemIds() {
         final ArrayList<Integer> ids = new ArrayList<>();
         for (MainMenuItem item : MainMenuItem.values()) {
-            if (item != MainMenuItem.DIVIDER) {
+            if (item != MainMenuItem.DIVIDER && item != MainMenuItem.GHOST_MODE) {
                 ids.add(item.getId());
             }
         }

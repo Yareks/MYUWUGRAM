@@ -8,10 +8,19 @@ import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.R;
 
 public class LauncherIconController {
+    /** В селекторе оставлены только фирменная иконка и классика Telegram. */
+    public static boolean isAvailableInSelector(LauncherIcon icon) {
+        return icon == LauncherIcon.EXTERALESS || icon == LauncherIcon.TELEGRAM;
+    }
+
     public static void tryFixLauncherIconIfNeeded() {
         for (LauncherIcon icon : LauncherIcon.values()) {
             if (isEnabled(icon)) {
-                return;
+                if (isAvailableInSelector(icon)) {
+                    return;
+                }
+                // Иконки больше нет в селекторе — возвращаем фирменную.
+                break;
             }
         }
 

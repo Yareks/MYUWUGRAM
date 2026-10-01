@@ -41,7 +41,8 @@ public enum MainMenuItem {
     /** Линейный поиск по значениям. */
     public static MainMenuItem getById(int id) {
         for (MainMenuItem item : values()) {
-            if (item.id == id) {
+            // Режим призрака вырезан из клиента: пункт из старых раскладок молча выкидывается.
+            if (item != GHOST_MODE && item.id == id) {
                 return item;
             }
         }

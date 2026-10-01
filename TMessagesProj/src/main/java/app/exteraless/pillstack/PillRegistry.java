@@ -19,8 +19,6 @@ import java.util.Map;
 import app.exteraless.pillstack.pills.BasePill;
 import app.exteraless.pillstack.pills.CachePill;
 import app.exteraless.pillstack.pills.DcPingPill;
-import app.exteraless.pillstack.pills.GhostPill;
-import app.exteraless.pillstack.pills.LastSeenPill;
 import app.exteraless.pillstack.pills.NetSpeedPill;
 import app.exteraless.pillstack.pills.ProxyPill;
 import app.exteraless.pillstack.pills.RamPill;
@@ -105,14 +103,6 @@ public class PillRegistry {
                 R.drawable.drawer_proxy_on,
                 IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom,
                 ProxyPill::new));
-        register(new PillInfo(PillType.GHOST.id, LocaleController.getString(R.string.GhostMode),
-                R.drawable.ayu_ghost,
-                IconBackgroundColors.PURPLE.top, IconBackgroundColors.PURPLE.bottom,
-                GhostPill::new));
-        register(new PillInfo(PillType.LAST_SEEN.id, LocaleController.getString(R.string.PillStackLastSeen),
-                R.drawable.msg_online,
-                IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom,
-                LastSeenPill::new));
         register(new PillInfo(PillType.RAM.id, LocaleController.getString(R.string.PillStackRam),
                 R.drawable.pillstack_ram,
                 IconBackgroundColors.CYAN.top, IconBackgroundColors.CYAN.bottom,

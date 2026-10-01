@@ -380,7 +380,6 @@ import tw.nekomimi.nekogram.helpers.remote.UpdateHelper;
 import tw.nekomimi.nekogram.settings.NekoPasscodeSettingsActivity;
 import tw.nekomimi.nekogram.llm.LlmConfig;
 import tw.nekomimi.nekogram.menu.forum.CustomForumTabsPopupWrapper;
-import tw.nekomimi.nekogram.menu.ghostmode.GhostModeExclusionPopupWrapper;
 import tw.nekomimi.nekogram.menu.regexfilters.RegexFiltersExclusionPopupWrapper;
 import tw.nekomimi.nekogram.menu.saveDeleted.SaveExclusionPopupWrapper;
 import tw.nekomimi.nekogram.parts.DialogTransKt;
@@ -1432,13 +1431,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             int y1 = (int) (v * (1.0f - mediaHeaderAnimationProgress));
 
             if (y1 != 0) {
+                final boolean bannerDrawn = app.exteraless.appearance.ProfileBanner.draw(canvas, this, getMeasuredWidth(), y1);
                 paint.setColor(currentColor);
                 updateBackgroundPaint();
                 final float progressToGradient = (playProfileAnimation == 0 ? 1f : avatarAnimationProgress) * hasColorAnimated.set(hasColorById);
-                if (progressToGradient < 1) {
+                if (progressToGradient < 1 && !bannerDrawn) {
                     canvas.drawRect(0, 0, getMeasuredWidth(), y1, paint);
                 }
-                if (progressToGradient > 0) {
+                if (progressToGradient > 0 && !bannerDrawn) {
                     backgroundPaint.setAlpha((int) (0xFF * progressToGradient));
                     canvas.drawRect(0, 0, getMeasuredWidth(), y1, backgroundPaint);
                 }
@@ -11872,12 +11872,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (userInfo != null && userInfo.stars_rating != null && userInfo.stars_rating.stars < 0) {
                         newString2 = getString(R.string.StarRatingLevelNegative).toLowerCase(Locale.ROOT);
                     } else {
-                        if (!NekoConfig.sendOnlinePackets.Bool() || NekoConfig.sendOfflinePacketAfterOnline.Bool()) {
-                            final int lastSeen = app.exteraless.ghost.OwnLastSeen.seconds(currentAccount, user);
-                            newString2 = lastSeen > 0 ? app.exteraless.ghost.OwnLastSeen.format(lastSeen) : getString(R.string.VoipOfflineTitle);
-                        } else {
-                            newString2 = LocaleController.getString(R.string.Online);
-                        }
+                        newString2 = LocaleController.getString(R.string.Online);
                     }
                 }
             } else if (user.id == UserObject.VERIFY) {
@@ -12680,8 +12675,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         if (currentEncryptedChat == null) {
                             createAutoDeleteItem(context);
                         }
-                        createGhostModeExclusionItem(userId);
-                        createSaveExclusionItem(userId);
+                            createSaveExclusionItem(userId);
                         createMessageFilterItem();
                         createExtraItems(otherItem);
                         otherItem.addSubItem(add_shortcut, R.drawable.msg_home, LocaleController.getString(R.string.AddShortcut));
@@ -12723,7 +12717,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (currentEncryptedChat == null) {
                         createAutoDeleteItem(context);
                     }
-                    createGhostModeExclusionItem(userId);
                     createSaveExclusionItem(userId);
                     createMessageFilterItem();
                     createExtraItems(otherItem);
@@ -12767,7 +12760,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (topicId == 0 && ChatObject.canChangeChatInfo(chat)) {
                 createAutoDeleteItem(context);
             }
-            createGhostModeExclusionItem(chatId);
             createSaveExclusionItem(chatId);
             createMessageFilterItem();
             if (chat.forum) {
@@ -13046,16 +13038,6 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         updateStoriesViewBounds(false);
     }
 
-    private void createGhostModeExclusionItem(long chatId) {
-        if (!NekoConfig.showGhostInDrawer.Bool() || ChatObject.isChannelAndNotMegaGroup(currentChat)) {
-            return;
-        }
-        if (currentEncryptedChat instanceof TLRPC.TL_encryptedChat) {
-            chatId = currentEncryptedChat.id;
-        }
-        var ghostModePopupWrapper = new GhostModeExclusionPopupWrapper(ProfileActivity.this, otherItem.getPopupLayout().getSwipeBack(), chatId, getResourceProvider());
-        otherItem.addSwipeBackItem(R.drawable.ayu_ghost_solar, null, getString(R.string.GhostMode), ghostModePopupWrapper.windowLayout);
-    }
 
     private void createSaveExclusionItem(long chatId) {
         if (!NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) return;

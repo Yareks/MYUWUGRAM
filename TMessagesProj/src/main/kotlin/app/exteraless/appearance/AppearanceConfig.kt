@@ -83,6 +83,11 @@ object AppearanceConfig {
     val drawerBackgroundDim =
         addConfig("OEAppearanceDrawerBgDim", ConfigItem.configTypeInt, 0)
 
+    /** Затемнение баннера-фона профиля, проценты 0-70. 0 — выключено. */
+    @JvmField
+    val profileBackgroundDim =
+        addConfig("OEAppearanceProfileBgDim", ConfigItem.configTypeInt, 30)
+
     /**
      * Какой набор темы Monet берут «Monet Light/Dark/AMOLED».
      *

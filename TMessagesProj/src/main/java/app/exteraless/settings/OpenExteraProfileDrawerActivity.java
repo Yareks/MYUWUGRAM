@@ -48,8 +48,12 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
     private static final int ID_RESET_BG = 2;
     private static final int ID_DIM = 3;
     private static final int ID_HIDE_PHONE = 4;
+    private static final int ID_PICK_PROFILE_BG = 5;
+    private static final int ID_RESET_PROFILE_BG = 6;
+    private static final int ID_PROFILE_DIM = 7;
 
     private static final int REQ_PICK_BG = 13271;
+    private static final int REQ_PICK_PROFILE_BG = 13272;
 
     /** Ключ пути к картинке в общих prefs; читает {@link DrawerContainer#applyDrawerBackground}. */
     public static final String PREF_BG_PATH = "OEAppearanceDrawerBgPath";
@@ -97,6 +101,16 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
         items.add(UItem.asShadow(getString(R.string.OEProfileDrawerInfo)));
 
         items.add(UItem.asHeader(getString(R.string.OEProfileDrawerSectionProfile)));
+        items.add(UItem.asButton(ID_PICK_PROFILE_BG, R.drawable.msg_photo,
+                getString(R.string.OEProfileBannerPick), currentProfileBackgroundLabel()));
+        if (app.exteraless.appearance.ProfileBanner.currentPath() != null) {
+            items.add(UItem.asButton(ID_RESET_PROFILE_BG, getString(R.string.OEProfileBannerReset)));
+        }
+        items.add(UItem.asButton(ID_PROFILE_DIM, R.drawable.msg_theme,
+                getString(R.string.OEProfileBannerDim), profileDimLabel()));
+        items.add(UItem.asShadow(getString(R.string.OEProfileBannerInfo)));
+
+        items.add(UItem.asHeader(getString(R.string.OEProfileDrawerSectionDrawer2)));
         items.add(UItem.asCheck(ID_HIDE_PHONE, getString(R.string.OEProfileDrawerHidePhone))
                 .setChecked(NekoConfig.hidePhone.Bool()));
         items.add(UItem.asShadow(""));
@@ -109,6 +123,12 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
             resetBackground();
         } else if (item.id == ID_DIM) {
             showDimDialog();
+        } else if (item.id == ID_PICK_PROFILE_BG) {
+            pickProfileImage();
+        } else if (item.id == ID_RESET_PROFILE_BG) {
+            resetProfileBackground();
+        } else if (item.id == ID_PROFILE_DIM) {
+            showProfileDimDialog();
         } else if (item.id == ID_HIDE_PHONE) {
             NekoConfig.hidePhone.setConfigBool(!NekoConfig.hidePhone.Bool());
             if (listView != null && listView.adapter != null) {
@@ -150,8 +170,94 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
         updateList();
     }
 
+    // ---- баннер профиля ----
+
+    private String currentProfileBackgroundLabel() {
+        return getString(app.exteraless.appearance.ProfileBanner.currentPath() != null
+                ? R.string.OEProfileDrawerBackgroundCustom
+                : R.string.OEProfileDrawerBackgroundDefault);
+    }
+
+    private void pickProfileImage() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("image/*");
+            startActivityForResult(intent, REQ_PICK_PROFILE_BG);
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
+    private void resetProfileBackground() {
+        //noinspection ResultOfMethodCallIgnored
+        app.exteraless.appearance.ProfileBanner.targetFile().delete();
+        AppearanceConfig.getPreferences().edit()
+                .remove(app.exteraless.appearance.ProfileBanner.PREF_PATH)
+                .apply();
+        app.exteraless.appearance.ProfileBanner.reload();
+        updateList();
+    }
+
+    private void copyProfileImage(final android.net.Uri uri) {
+        Utilities.globalQueue.postRunnable(() -> {
+            boolean ok = false;
+            try (InputStream in = ApplicationLoader.applicationContext.getContentResolver().openInputStream(uri)) {
+                File out = app.exteraless.appearance.ProfileBanner.targetFile();
+                try (FileOutputStream fos = new FileOutputStream(out)) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        fos.write(buf, 0, n);
+                    }
+                }
+                AppearanceConfig.getPreferences().edit()
+                        .putString(app.exteraless.appearance.ProfileBanner.PREF_PATH, out.getAbsolutePath())
+                        .apply();
+                ok = true;
+            } catch (Throwable t) {
+                FileLog.e("ProfileBanner: copy failed", t);
+            }
+            final boolean success = ok;
+            AndroidUtilities.runOnUIThread(() -> {
+                if (success) {
+                    app.exteraless.appearance.ProfileBanner.reload();
+                    updateList();
+                }
+            });
+        });
+    }
+
+    private String profileDimLabel() {
+        int dim = AppearanceConfig.profileBackgroundDim.Int();
+        return dim <= 0 ? getString(R.string.OEProfileDrawerDimOff) : dim + "%";
+    }
+
+    private void showProfileDimDialog() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        String[] names = new String[DIM_STEPS.length];
+        for (int i = 0; i < DIM_STEPS.length; i++) {
+            names[i] = DIM_STEPS[i] <= 0 ? getString(R.string.OEProfileDrawerDimOff) : DIM_STEPS[i] + "%";
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.OEProfileBannerDim));
+        builder.setItems(names, (dialog, which) -> {
+            AppearanceConfig.profileBackgroundDim.setConfigInt(DIM_STEPS[which]);
+            updateList();
+        });
+        showDialog(builder.create());
+    }
+
     @Override
     public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQ_PICK_PROFILE_BG && resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+            if (getParentActivity() != null) {
+                copyProfileImage(data.getData());
+            }
+            return;
+        }
         if (requestCode != REQ_PICK_BG || resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
             return;
         }

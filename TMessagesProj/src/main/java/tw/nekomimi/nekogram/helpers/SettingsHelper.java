@@ -48,7 +48,6 @@ public class SettingsHelper {
 
     static {
         SEARCH_TITLE_ALIASES.put("OEGeneral:lastfm", "OEGeneralLastFm");
-        SEARCH_TITLE_ALIASES.put("OEAyu:ayuGhost", "GhostMode");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuDisableAll", "OEGeneralAyuMomentsDisableAll");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuClearDatabase", "ClearMessageDatabase");
         SEARCH_TITLE_ALIASES.put("OEAppearance:appNavigation", "OEAppearanceNavigation");

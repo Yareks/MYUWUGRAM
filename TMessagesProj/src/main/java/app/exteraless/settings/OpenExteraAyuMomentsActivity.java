@@ -43,7 +43,6 @@ import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.config.ConfigItem;
 import tw.nekomimi.nekogram.filters.RegexFiltersSettingActivity;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
-import tw.nekomimi.nekogram.settings.GhostModeActivity;
 import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 import xyz.nextalone.nagram.NaConfig;
 
@@ -70,7 +69,6 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
     };
 
     private int headerRow;
-    private int ghostRow;
     private int askStoryRow;
     private int regexRow;
     private int saveLastSeenRow;
@@ -113,7 +111,6 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
         super.updateRows();
 
         headerRow = addRow("ayuHeader");
-        ghostRow = addRow("ayuGhost");
         askStoryRow = addRow(NaConfig.INSTANCE.getAskBeforeOpeningStory().getKey());
         regexRow = addRow(NaConfig.INSTANCE.getRegexFiltersEnabled().getKey());
         saveLastSeenRow = addRow(NaConfig.INSTANCE.getSaveLocalLastSeen().getKey());
@@ -188,9 +185,7 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == ghostRow) {
-            presentFragment(new GhostModeActivity());
-        } else if (position == askStoryRow) {
+        if (position == askStoryRow) {
             toggleAyuConfig(view, NaConfig.INSTANCE.getAskBeforeOpeningStory(), false);
         } else if (position == regexRow) {
             // Как в эталоне: тап по тексту ведёт в список фильтров, тап по переключателю — включает.
@@ -255,20 +250,6 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
      * уже своя: пункта нет в раскладке по умолчанию, а запись без нужды сделала бы
      * её кастомной и заморозила текущий состав.
      */
-    private void removeGhostShortcuts() {
-        PillStackConfig.setPillActive(PillType.GHOST.id, false);
-        PillStackConfig.savePillsLayout();
-
-        final int ghostId = MainMenuItem.GHOST_MODE.getId();
-        final ArrayList<Integer> layout = MainMenuLayout.getLayoutMutable();
-        if (layout.remove((Integer) ghostId)) {
-            final ArrayList<Integer> hidden = MainMenuLayout.getHiddenItemsMutable();
-            if (!hidden.contains(ghostId)) {
-                hidden.add(ghostId);
-            }
-            MainMenuLayout.save(layout, hidden);
-        }
-    }
 
     private void showDisableAllDialog() {
         Context context = getParentActivity();
@@ -292,12 +273,6 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
         }
         // Через toggle, а не setGhostMode: он же отправляет пакет онлайна,
         // без которого мы останемся невидимыми уже без своего ведома.
-        if (NekoConfig.isGhostModeActive()) {
-            NekoConfig.toggleGhostMode();
-            NotificationCenter.getInstance(currentAccount)
-                    .postNotificationName(NotificationCenter.mainUserInfoChanged);
-        }
-        removeGhostShortcuts();
         rebuildRowsAndNotify();
     }
 
@@ -593,10 +568,7 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
                 }
                 case TYPE_TEXT: {
                     TextCell cell = (TextCell) holder.itemView;
-                    if (position == ghostRow) {
-                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
-                        cell.setTextAndIcon(getString(R.string.GhostMode), R.drawable.ayu_ghost, true);
-                    } else if (position == disableAllRow) {
+                    if (position == disableAllRow) {
                         cell.setColors(Theme.key_text_RedRegular, Theme.key_text_RedBold);
                         cell.setTextAndIcon(getString(R.string.OEGeneralAyuMomentsDisableAll), R.drawable.msg_block, true);
                     }
@@ -633,7 +605,7 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
                 return TYPE_HEADER;
             } else if (position == dividerRow) {
                 return TYPE_INFO_PRIVACY;
-            } else if (position == ghostRow || position == disableAllRow) {
+            } else if (position == disableAllRow) {
                 return TYPE_TEXT;
             } else if (position == deletedMarkRow || position == clearDbRow) {
                 return TYPE_SETTINGS;

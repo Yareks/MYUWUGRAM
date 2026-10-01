@@ -147,50 +147,8 @@ public class AyuGhostUtils {
     }
 
     public static InterceptResult interceptRequest(TLObject object, RequestDelegate onCompleteOrig) {
-        Long dialogId = extractDialogId(object);
-        boolean readExcluded = dialogId != null && AyuGhostPreferences.getGhostModeReadExclusion(dialogId);
-        boolean typingExcluded = dialogId != null && AyuGhostPreferences.getGhostModeTypingExclusion(dialogId);
-
-        // Block typing if disabled
-        if (!NekoConfig.sendUploadProgress.Bool() && (object instanceof TLRPC.TL_messages_setTyping || object instanceof TLRPC.TL_messages_setEncryptedTyping)) {
-            if (!typingExcluded) {
-                FileLog.d("GhostMode: Blocking typing status request.");
-                return InterceptResult.Blocked(onCompleteOrig);
-            }
-        }
-
-        // Block read receipts if disabled
-        if (!NekoConfig.sendReadMessagePackets.Bool() && object instanceof TLRPC.TL_messages_getMessagesViews views && views.increment) {
-            if (!AyuState.getAllowReadPacket() && !readExcluded) {
-                views.increment = false;
-            }
-        } else if (!NekoConfig.sendReadMessagePackets.Bool() && (isReadMessageRequest(object))) {
-            if (!AyuState.getAllowReadPacket() && !readExcluded) {
-                FileLog.d("GhostMode: Blocking read status request and sending fake response.");
-                sendFakeReadResponse(onCompleteOrig);
-                return InterceptResult.Blocked(onCompleteOrig);
-            }
-        }
-        if ((!NekoConfig.sendReadStoriesPackets.Bool() || storyGhostSession) && isReadStoriesRequest(object)) {
-            if (storyGhostSession || !readExcluded) {
-                FileLog.d("GhostMode: Blocking story read request.");
-                return InterceptResult.Blocked(onCompleteOrig);
-            }
-        }
-
-        // Force offline if online status sending disabled
-        if (!NekoConfig.sendOnlinePackets.Bool() && object instanceof TL_account.updateStatus updateStatus) {
-            FileLog.d("GhostMode: Forcing offline status in updateStatus request.");
-            updateStatus.offline = true;
-        }
-
-        // Handle Mark read after sending
-        handleReadAfterSend(object);
-
-        // Go offline after sending
-        RequestDelegate effectiveOnComplete = handleOfflineAfterSend(object, onCompleteOrig);
-
-        return InterceptResult.Proceed(effectiveOnComplete);
+        // Режим призрака вырезан из клиента: никакие пакеты больше не подменяются.
+        return InterceptResult.Proceed(onCompleteOrig);
     }
 
     private static void handleReadAfterSend(TLObject object) {

@@ -23,7 +23,7 @@
     <string name="QrWifiPasswordCopied">Пароль скопирован</string>
     <string name="QrWifiUnknownNetwork">В коде нет имени сети</string>
     <string name="QrLoginHint">Этот код входит в аккаунт. Используйте Настройки → Устройства → Подключить устройство: тот экран проверяет код и защищает аккаунт.</string>
-    <string name="AppIconExteraless" translatable="false">MYUWUGRAM</string>
+    <string name="AppIconExteraless" translatable="false">UwUgram</string>
     <string name="AppIconBlueprint" translatable="false">Blueprint</string>
     <string name="AppIconRed" translatable="false">Red</string>
     <string name="AppIconNya" translatable="false">Nya</string>
