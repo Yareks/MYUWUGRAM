@@ -215,7 +215,7 @@ public class NekoExperimentalSettingsActivity extends BaseNekoXSettingsActivity 
         cellGroup.rows.removeAll(Arrays.asList(
                 backAnimationStyleRow,
                 headerConnection, boostUploadRow, dividerConnection,
-                ghostModeRow, regexFiltersEnabledRow, saveLastSeenRow, enableSaveDeletedMessagesRow,
+                regexFiltersEnabledRow, saveLastSeenRow, enableSaveDeletedMessagesRow,
                 enableSaveEditsHistoryRow, messageSavingSaveMediaRow, saveDeletedInPrivateChatsRow,
                 saveDeletedInGroupsRow, saveDeletedInChannelsRow, saveDeletedMessageForBotsUserRow,
                 saveDeletedMessageInBotChatRow, replyToDeletedAsQuoteRow, translucentDeletedMessagesRow,

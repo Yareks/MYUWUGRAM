@@ -101,7 +101,7 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
         items.add(UItem.asShadow(getString(R.string.OEProfileDrawerInfo)));
 
         items.add(UItem.asHeader(getString(R.string.OEProfileDrawerSectionProfile)));
-        items.add(UItem.asButton(ID_PICK_PROFILE_BG, R.drawable.msg_photo,
+        items.add(UItem.asButton(ID_PICK_PROFILE_BG, R.drawable.msg_media,
                 getString(R.string.OEProfileBannerPick), currentProfileBackgroundLabel()));
         if (app.exteraless.appearance.ProfileBanner.currentPath() != null) {
             items.add(UItem.asButton(ID_RESET_PROFILE_BG, getString(R.string.OEProfileBannerReset)));
