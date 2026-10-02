@@ -4,7 +4,9 @@ import android.content.Context;
 import android.content.pm.PackageInfo;
 import android.text.TextUtils;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Path;
+import android.graphics.drawable.Drawable;
 import android.view.HapticFeedbackConstants;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -22,6 +24,7 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.LauncherIconController;
 
 /**
  * About-шапка корневого экрана exteraless.
@@ -35,11 +38,9 @@ import org.telegram.ui.Components.LayoutHelper;
  */
 public class AboutHeaderCell extends LinearLayout {
 
-    /** Цвет подложки иконки приложения, как R.color.ic_background в exteraGram. */
-    private static final int LOGO_BACKGROUND = 0xFFE83030;
-
     /** Путь формы логотипа. Считается один раз, сбрасывается при смене режима. */
     private Path shapePath;
+    private final ImageView logo;
 
     private Path shapePath() {
         if (shapePath == null) {
@@ -53,7 +54,7 @@ public class AboutHeaderCell extends LinearLayout {
         setOrientation(VERTICAL);
         setGravity(Gravity.CENTER);
 
-        ImageView logo = new ImageView(context) {
+        logo = new ImageView(context) {
             @Override
             public void draw(Canvas canvas) {
                 canvas.save();
@@ -63,8 +64,8 @@ public class AboutHeaderCell extends LinearLayout {
             }
         };
         logo.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        logo.setBackgroundColor(LOGO_BACKGROUND);
-        logo.setImageResource(R.drawable.exteraless_icon);
+        logo.setBackgroundColor(Color.TRANSPARENT);
+        refreshLogo();
         logo.setOnLongClickListener(v -> {
             IconPacksConfig.toggleSystemIconShape();
             IconShapeHelper.invalidate();
@@ -96,6 +97,18 @@ public class AboutHeaderCell extends LinearLayout {
         version.setText(buildVersionString());
         addView(version, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL, 60, 2, 60, 28));
+    }
+
+    /** Текущая иконка с рабочего стола, а не знак exteraless. */
+    public void refreshLogo() {
+        if (logo == null) {
+            return;
+        }
+        final Drawable icon = LauncherIconController.currentDrawable(getContext());
+        if (icon != null) {
+            logo.setBackgroundColor(Color.TRANSPARENT);
+            logo.setImageDrawable(icon);
+        }
     }
 
     /** "12.9.2 (1258)" — версия плюс versionCode из PackageInfo, как в оригинале. */

@@ -223,6 +223,12 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             switch (holder.getItemViewType()) {
+                case TYPE_ABOUT: {
+                    if (holder.itemView instanceof AboutHeaderCell) {
+                        ((AboutHeaderCell) holder.itemView).refreshLogo();
+                    }
+                    break;
+                }
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == designHeaderRow) {

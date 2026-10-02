@@ -28,6 +28,7 @@ import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
+import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
 import android.graphics.PorterDuff;
@@ -47,6 +48,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.webkit.CookieManager;
 import android.webkit.WebStorage;
 import android.webkit.WebView;
@@ -261,6 +263,9 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             if (listView != null) {
                 listView.adapter.update(animated);
             }
+        } else if (listView != null) {
+            // Иконку приложения могли сменить на другом экране.
+            listView.adapter.update(false);
         }
     }
 
@@ -767,9 +772,10 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         if (app.exteraless.general.GeneralConfig.showNagramSettings()) {
             items.add(SettingCell.Factory.of(100, 0xFF3CCFFF, 0xFF007AFF, R.drawable.filled_profile_settings, getString(R.string.NekoSettings)));
         }
-        // Как в exteraGram 12.9.0 (SettingsActivity.java:899): знак приложения вместо
-        // шестерёнки, акцент фирменного цвета на обе точки градиента.
-        items.add(SettingCell.Factory.of(-1, 0xFF993C38, 0xFF993C38, R.drawable.exteraless_icon_tile, getString(R.string.OpenExteraPreferences), getString(R.string.OpenExteraInfo)));
+        // Знак строки — текущая иконка с рабочего стола, не exteraless-самолётик.
+        UItem uwuSettings = SettingCell.Factory.of(-1, 0, 0, 0, getString(R.string.OpenExteraPreferences), getString(R.string.OpenExteraInfo));
+        uwuSettings.accent = true;
+        items.add(uwuSettings);
         items.add(UItem.asShadow(null));
 
         items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, getString(R.string.SettingsAccount), getString(R.string.SettingsAccountInfo)));
@@ -1308,10 +1314,13 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
             subtitleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
             valueView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText, resourcesProvider));
-            iconBackground.setDrawBorder(resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark());
+            if (!fullAppIcon) {
+                iconBackground.setDrawBorder(resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark());
+            }
         }
 
         private boolean twoLines;
+        private boolean fullAppIcon;
 
         public void set(
             int iconColorTop, int iconColorBottom, int icon,
@@ -1319,6 +1328,15 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
             CharSequence subtitle,
             CharSequence value
         ) {
+            fullAppIcon = false;
+            iconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            ViewGroup.LayoutParams glyphParams = iconView.getLayoutParams();
+            if (glyphParams != null) {
+                glyphParams.width = dp(24);
+                glyphParams.height = dp(24);
+                iconView.setLayoutParams(glyphParams);
+            }
+            iconLayout.setClipToOutline(false);
             iconLayout.setVisibility(icon != 0 ? View.VISIBLE : View.GONE);
             titleView.setTranslationX(icon == 0 ? dp(2) : 0);
             subtitleView.setTranslationX(icon == 0 ? dp(2) : 0);
@@ -1332,6 +1350,52 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 iconParams.height = iconSize;
                 iconLayout.setLayoutParams(iconParams);
             }
+            titleView.setText(title);
+            subtitleView.setVisibility((twoLines = !TextUtils.isEmpty(subtitle)) ? View.VISIBLE : View.GONE);
+            subtitleView.setText(subtitle);
+            setValue(value);
+        }
+
+        /** Полная картинка выбранной иконки, без цветной плитки и без SRC_IN. */
+        public void setAppIcon(Drawable icon, CharSequence title, CharSequence subtitle, CharSequence value) {
+            fullAppIcon = true;
+            iconLayout.setVisibility(View.VISIBLE);
+            titleView.setTranslationX(0);
+            subtitleView.setTranslationX(0);
+            iconView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+            iconView.clearColorFilter();
+            ViewGroup.LayoutParams glyphParams = iconView.getLayoutParams();
+            if (glyphParams != null) {
+                glyphParams.width = ViewGroup.LayoutParams.MATCH_PARENT;
+                glyphParams.height = ViewGroup.LayoutParams.MATCH_PARENT;
+                iconView.setLayoutParams(glyphParams);
+            }
+            iconView.setImageDrawable(icon);
+            final boolean m3 = app.exteraless.appearance.M3ListItems.enabled();
+            iconBackground.setCircle(m3);
+            iconBackground.setColor(0, 0);
+            iconBackground.setDrawBorder(false);
+            final int iconSize = dp(m3 && !mini ? 36 : 28);
+            final ViewGroup.LayoutParams iconParams = iconLayout.getLayoutParams();
+            if (iconParams != null && iconParams.width != iconSize) {
+                iconParams.width = iconSize;
+                iconParams.height = iconSize;
+                iconLayout.setLayoutParams(iconParams);
+            }
+            iconLayout.setOutlineProvider(new ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, Outline outline) {
+                    if (view.getWidth() <= 0 || view.getHeight() <= 0) {
+                        return;
+                    }
+                    if (m3) {
+                        outline.setOval(0, 0, view.getWidth(), view.getHeight());
+                    } else {
+                        outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(10));
+                    }
+                }
+            });
+            iconLayout.setClipToOutline(true);
             titleView.setText(title);
             subtitleView.setVisibility((twoLines = !TextUtils.isEmpty(subtitle)) ? View.VISIBLE : View.GONE);
             subtitleView.setText(subtitle);
@@ -1466,6 +1530,15 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
 
             @Override
             public void bindView(View view, UItem item, boolean divider, UniversalAdapter adapter, UniversalRecyclerView listView) {
+                if (item.accent) {
+                    ((SettingCell) view).setAppIcon(
+                        LauncherIconController.currentDrawable(view.getContext()),
+                        item.text,
+                        item.subtext,
+                        item.textValue
+                    );
+                    return;
+                }
                 int iconColorTop    = (int) item.longValue;
                 int iconColorBottom = (int) (item.longValue >>> 32);
                 ((SettingCell) view).set(

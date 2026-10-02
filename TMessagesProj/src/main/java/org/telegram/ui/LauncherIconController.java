@@ -3,7 +3,12 @@ package org.telegram.ui;
 import android.content.ComponentName;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.Canvas;
+import android.graphics.ColorFilter;
+import android.graphics.PixelFormat;
+import android.graphics.drawable.Drawable;
 
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.R;
 
@@ -44,6 +49,90 @@ public class LauncherIconController {
         // показывать выбранным то, что человек видит на рабочем столе.
         return i == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
                 || i == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == LauncherIcon.EXTERALESS;
+    }
+
+    /** Иконка, которая сейчас стоит на рабочем столе. */
+    public static LauncherIcon current() {
+        for (LauncherIcon icon : LauncherIcon.values()) {
+            if (isEnabled(icon)) {
+                return icon;
+            }
+        }
+        return LauncherIcon.EXTERALESS;
+    }
+
+    /** Картинка выбранной иконки: готовый арт целиком, классика — фон плюс знак. */
+    public static Drawable currentDrawable(Context context) {
+        if (context == null) {
+            return null;
+        }
+        final LauncherIcon icon = current();
+        final Drawable background = context.getDrawable(icon.background);
+        if (isFullArt(icon) || icon.foreground == 0) {
+            return background;
+        }
+        final Drawable foreground = context.getDrawable(icon.foreground);
+        if (background == null) {
+            return foreground;
+        }
+        if (foreground == null) {
+            return background;
+        }
+        return new AdaptivePreview(background, foreground);
+    }
+
+    /** Классическая adaptive-иконка: фон крупнее рамки, знак чуть вылезает за край. */
+    private static final class AdaptivePreview extends Drawable {
+        private final Drawable background;
+        private final Drawable foreground;
+
+        AdaptivePreview(Drawable background, Drawable foreground) {
+            this.background = background;
+            this.foreground = foreground;
+        }
+
+        @Override
+        public void draw(Canvas canvas) {
+            final int width = getBounds().width();
+            final int height = getBounds().height();
+            if (width <= 0 || height <= 0) {
+                return;
+            }
+            if (background != null) {
+                canvas.save();
+                final float scale = 1f + AndroidUtilities.dp(42) / (float) width;
+                canvas.scale(scale, scale, getBounds().exactCenterX(), getBounds().exactCenterY());
+                background.setBounds(getBounds());
+                background.draw(canvas);
+                canvas.restore();
+            }
+            if (foreground != null) {
+                final int pad = AndroidUtilities.dp(5);
+                foreground.setBounds(getBounds().left - pad, getBounds().top - pad, getBounds().right + pad, getBounds().bottom + pad);
+                foreground.draw(canvas);
+            }
+        }
+
+        @Override
+        public int getIntrinsicWidth() {
+            return AndroidUtilities.dp(108);
+        }
+
+        @Override
+        public int getIntrinsicHeight() {
+            return AndroidUtilities.dp(108);
+        }
+
+        @Override
+        public void setAlpha(int alpha) {}
+
+        @Override
+        public void setColorFilter(ColorFilter colorFilter) {}
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
     }
 
     public static void setIcon(LauncherIcon icon) {
