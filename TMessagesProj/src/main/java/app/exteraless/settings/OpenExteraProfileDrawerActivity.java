@@ -51,7 +51,7 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
     private static final int ID_PICK_PROFILE_BG = 5;
     private static final int ID_RESET_PROFILE_BG = 6;
     private static final int ID_PROFILE_DIM = 7;
-    private static final int ID_PROFILE_FIT = 8;
+    private static final int ID_DRAWER_FIT = 8;
 
     private static final int REQ_PICK_BG = 13271;
     private static final int REQ_PICK_PROFILE_BG = 13272;
@@ -99,6 +99,8 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
         }
         items.add(UItem.asButton(ID_DIM, R.drawable.msg_theme,
                 getString(R.string.OEProfileDrawerDim), dimLabel()));
+        items.add(UItem.asButton(ID_DRAWER_FIT, R.drawable.msg_theme,
+                getString(R.string.OEProfileDrawerFit), drawerFitLabel()));
         items.add(UItem.asShadow(getString(R.string.OEProfileDrawerInfo)));
 
         items.add(UItem.asHeader(getString(R.string.OEProfileDrawerSectionProfile)));
@@ -109,8 +111,6 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
         }
         items.add(UItem.asButton(ID_PROFILE_DIM, R.drawable.msg_theme,
                 getString(R.string.OEProfileBannerDim), profileDimLabel()));
-        items.add(UItem.asButton(ID_PROFILE_FIT, R.drawable.msg_theme,
-                getString(R.string.OEProfileBannerFit), profileFitLabel()));
         items.add(UItem.asShadow(getString(R.string.OEProfileBannerInfo)));
 
         items.add(UItem.asHeader(getString(R.string.OEProfileDrawerSectionDrawer2)));
@@ -126,14 +126,14 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
             resetBackground();
         } else if (item.id == ID_DIM) {
             showDimDialog();
+        } else if (item.id == ID_DRAWER_FIT) {
+            showDrawerFitDialog();
         } else if (item.id == ID_PICK_PROFILE_BG) {
             pickProfileImage();
         } else if (item.id == ID_RESET_PROFILE_BG) {
             resetProfileBackground();
         } else if (item.id == ID_PROFILE_DIM) {
             showProfileDimDialog();
-        } else if (item.id == ID_PROFILE_FIT) {
-            showProfileFitDialog();
         } else if (item.id == ID_HIDE_PHONE) {
             NekoConfig.hidePhone.setConfigBool(!NekoConfig.hidePhone.Bool());
             if (listView != null && listView.adapter != null) {
@@ -255,24 +255,25 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
         showDialog(builder.create());
     }
 
-    private String profileFitLabel() {
-        return getString(AppearanceConfig.profileBackgroundFit.Bool()
-                ? R.string.OEProfileBannerFitWhole
-                : R.string.OEProfileBannerFitCrop);
+    private String drawerFitLabel() {
+        return getString(AppearanceConfig.drawerBackgroundStretch.Bool()
+                ? R.string.OEProfileDrawerFitStretch
+                : R.string.OEProfileDrawerFitCrop);
     }
 
-    private void showProfileFitDialog() {
+    private void showDrawerFitDialog() {
         if (getParentActivity() == null) {
             return;
         }
         String[] names = new String[]{
-                getString(R.string.OEProfileBannerFitCrop),
-                getString(R.string.OEProfileBannerFitWhole)
+                getString(R.string.OEProfileDrawerFitCrop),
+                getString(R.string.OEProfileDrawerFitStretch)
         };
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(getString(R.string.OEProfileBannerFit));
+        builder.setTitle(getString(R.string.OEProfileDrawerFit));
         builder.setItems(names, (dialog, which) -> {
-            AppearanceConfig.profileBackgroundFit.setConfigBool(which == 1);
+            AppearanceConfig.drawerBackgroundStretch.setConfigBool(which == 1);
+            DrawerContainer.refreshActiveDrawerBackground();
             updateList();
         });
         showDialog(builder.create());

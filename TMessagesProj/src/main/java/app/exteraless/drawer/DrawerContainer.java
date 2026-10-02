@@ -111,10 +111,11 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
             path = null;
         }
         final int dim = AppearanceConfig.drawerBackgroundDim.Int();
+        final boolean stretch = AppearanceConfig.drawerBackgroundStretch.Bool();
         if (path == null && dim <= 0) {
             drawerPanel.setBackgroundColor(Theme.getColor(COLOR_KEY_DRAWER_BACKGROUND));
         } else {
-            drawerPanel.setBackground(new DrawerBackgroundDrawable(path, dim));
+            drawerPanel.setBackground(new DrawerBackgroundDrawable(path, dim, stretch));
         }
     }
 

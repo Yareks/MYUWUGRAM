@@ -154,16 +154,19 @@
     <string name="OEProfileDrawerDim">Background dim</string>
     <string name="OEProfileDrawerDimOff">Off</string>
     <string name="OEProfileDrawerHidePhone">Hide phone number in drawer</string>
-    <string name="OEProfileDrawerInfo">Background is re-created when the app restarts or the theme changes; hiding the number applies on next drawer open.</string>
+    <string name="OEProfileDrawerInfo">Background is re-created when the app restarts or the theme changes. Stretch fills the drawer with the whole picture and does not crop it.</string>
     <!-- Баннер-фон страницы профиля -->
     <string name="OEProfileBannerDefault">Avatar</string>
     <string name="OEProfileBannerPick">Profile background</string>
     <string name="OEProfileBannerReset">Reset profile background</string>
     <string name="OEProfileBannerDim">Profile background dimming</string>
-    <string name="OEProfileBannerInfo">Every profile header uses the avatar. A custom image replaces it only on your own profile. Fill mode can show the whole picture without cropping.</string>
+    <string name="OEProfileBannerInfo">Every profile header uses the avatar. A custom image replaces it only on your own profile.</string>
     <string name="OEProfileDrawerSectionDrawer2">Profile</string>
     <string name="OEProfileBannerFit">Fill mode</string>
     <string name="OEProfileBannerFitCrop">Crop</string>
     <string name="OEProfileBannerFitWhole">Whole image</string>
     <string name="OEAiHubInfo">Assistant, voice transcription and hiding of built-in AI features.</string>
+    <string name="OEProfileDrawerFit">Fill mode</string>
+    <string name="OEProfileDrawerFitCrop">Crop</string>
+    <string name="OEProfileDrawerFitStretch">Stretch</string>
 </resources>

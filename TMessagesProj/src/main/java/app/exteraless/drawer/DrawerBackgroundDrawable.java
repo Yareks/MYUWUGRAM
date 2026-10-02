@@ -16,7 +16,8 @@ import org.telegram.ui.ActionBar.Theme;
 
 /**
  * Фон панели бокового меню: базовый цвет темы, поверх — опциональная картинка
- * (center-crop по границам панели) и равномерное затемнение в процентах.
+ * и равномерное затемнение в процентах. По умолчанию center-crop; режим
+ * растяжения кладёт картинку на всю панель без обрезки.
  *
  * Декод происходит один раз на фоновом потоке: до готовности битмапа виден
  * просто цвет темы, поэтому первое открытие шторки никогда не подвисает.
@@ -28,6 +29,7 @@ public class DrawerBackgroundDrawable extends Drawable {
 
     private final String path;
     private final int dim;
+    private final boolean stretch;
     private final Paint bitmapPaint = new Paint(Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
     private final Paint dimPaint = new Paint();
     private final Rect tmpRect = new Rect();
@@ -35,9 +37,10 @@ public class DrawerBackgroundDrawable extends Drawable {
     private volatile Bitmap bitmap;
     private boolean loadStarted;
 
-    public DrawerBackgroundDrawable(String path, int dim) {
+    public DrawerBackgroundDrawable(String path, int dim, boolean stretch) {
         this.path = path;
         this.dim = Math.max(0, Math.min(70, dim));
+        this.stretch = stretch;
         dimPaint.setColor(Color.BLACK);
     }
 
@@ -51,16 +54,20 @@ public class DrawerBackgroundDrawable extends Drawable {
             startLoad();
         }
         if (bmp != null) {
-            final float scale = Math.max(
-                    (float) b.width() / bmp.getWidth(),
-                    (float) b.height() / bmp.getHeight());
-            final int w = Math.round(bmp.getWidth() * scale);
-            final int h = Math.round(bmp.getHeight() * scale);
-            tmpRect.set(
-                    b.left + (b.width() - w) / 2,
-                    b.top + (b.height() - h) / 2,
-                    b.left + (b.width() + w) / 2,
-                    b.top + (b.height() + h) / 2);
+            if (stretch) {
+                tmpRect.set(b);
+            } else {
+                final float scale = Math.max(
+                        (float) b.width() / bmp.getWidth(),
+                        (float) b.height() / bmp.getHeight());
+                final int w = Math.round(bmp.getWidth() * scale);
+                final int h = Math.round(bmp.getHeight() * scale);
+                tmpRect.set(
+                        b.left + (b.width() - w) / 2,
+                        b.top + (b.height() - h) / 2,
+                        b.left + (b.width() + w) / 2,
+                        b.top + (b.height() + h) / 2);
+            }
             canvas.drawBitmap(bmp, null, tmpRect, bitmapPaint);
         }
         if (dim > 0) {

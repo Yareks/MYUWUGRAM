@@ -83,15 +83,15 @@ object AppearanceConfig {
     val drawerBackgroundDim =
         addConfig("OEAppearanceDrawerBgDim", ConfigItem.configTypeInt, 0)
 
+    /** true — картинка шторки растягивается на всю панель, без обрезки. */
+    @JvmField
+    val drawerBackgroundStretch =
+        addConfig("OEAppearanceDrawerBgStretch", ConfigItem.configTypeBool, false)
+
     /** Затемнение баннера-фона профиля, проценты 0-70. 0 — выключено. */
     @JvmField
     val profileBackgroundDim =
         addConfig("OEAppearanceProfileBgDim", ConfigItem.configTypeInt, 30)
-
-    /** true — картинка шапки целиком, без обрезки. false — center-crop. */
-    @JvmField
-    val profileBackgroundFit =
-        addConfig("OEAppearanceProfileBgFit", ConfigItem.configTypeBool, false)
 
     /**
      * Какой набор темы Monet берут «Monet Light/Dark/AMOLED».

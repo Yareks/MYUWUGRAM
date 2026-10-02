@@ -88,38 +88,18 @@ public final class ProfileBanner {
         return paintBanner(canvas, bmp, w, h, dimPercent);
     }
 
-    /**
-     * Crop заполняет шапку, обрезая края. Fit показывает картинку целиком:
-     * поля заливаются цветом края, без растягивания пикселей.
-     */
+    /** Center-crop и затемнение. Картинка всегда закрывает шапку целиком. */
     private static boolean paintBanner(Canvas canvas, Bitmap bmp, int w, int h, int dimPercent) {
-        final boolean fit = AppearanceConfig.profileBackgroundFit.Bool();
-        final float sx = (float) w / bmp.getWidth();
-        final float sy = (float) h / bmp.getHeight();
-        final float scale = fit ? Math.min(sx, sy) : Math.max(sx, sy);
-        final float dw = bmp.getWidth() * scale;
-        final float dh = bmp.getHeight() * scale;
-        final float left = (w - dw) / 2f;
-        final float top = (h - dh) / 2f;
-        canvas.save();
-        canvas.clipRect(0, 0, w, h);
-        if (fit) {
-            dimPaint.setShader(null);
-            dimPaint.setColor(letterboxColor(bmp));
-            dimPaint.setAlpha(255);
-            canvas.drawRect(0, 0, w, h, dimPaint);
-        }
+        final float scale = Math.max((float) w / bmp.getWidth(), (float) h / bmp.getHeight());
         matrix.reset();
         matrix.setScale(scale, scale);
-        matrix.postTranslate(left, top);
+        matrix.postTranslate((w - bmp.getWidth() * scale) / 2f, (h - bmp.getHeight() * scale) / 2f);
         BitmapShader shader = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
         shader.setLocalMatrix(matrix);
         paint.setShader(shader);
-        if (fit) {
-            canvas.drawRect(left, top, left + dw, top + dh, paint);
-        } else {
-            canvas.drawPaint(paint);
-        }
+        canvas.save();
+        canvas.clipRect(0, 0, w, h);
+        canvas.drawPaint(paint);
         paint.setShader(null);
         final int dim = Math.max(0, Math.min(80, dimPercent));
         if (dim > 0) {
@@ -129,19 +109,6 @@ public final class ProfileBanner {
         }
         canvas.restore();
         return true;
-    }
-
-    private static int letterboxColor(Bitmap bmp) {
-        final int w = bmp.getWidth();
-        final int h = bmp.getHeight();
-        final int c1 = bmp.getPixel(w / 2, 0);
-        final int c2 = bmp.getPixel(w / 2, Math.max(0, h - 1));
-        final int c3 = bmp.getPixel(0, h / 2);
-        final int c4 = bmp.getPixel(Math.max(0, w - 1), h / 2);
-        return Color.rgb(
-                (Color.red(c1) + Color.red(c2) + Color.red(c3) + Color.red(c4)) / 4,
-                (Color.green(c1) + Color.green(c2) + Color.green(c3) + Color.green(c4)) / 4,
-                (Color.blue(c1) + Color.blue(c2) + Color.blue(c3) + Color.blue(c4)) / 4);
     }
 
     private static void startLoad(final String path, final View host) {
