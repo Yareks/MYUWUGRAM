@@ -17,7 +17,7 @@ import org.telegram.messenger.FileLog;
 import java.io.File;
 
 /**
- * Кастомный фон шапки профиля («баннер»), как в плагине Custom Banner.
+ * Фон шапки профиля: своя картинка (только свой профиль) или аватарка.
  *
  * Хранится копией во внутреннем хранилище, ключ пути — {@link #PREF_PATH}, затемнение —
  * {@link AppearanceConfig#profileBackgroundDim}. Битмап грузится один раз на фоновой
@@ -90,6 +90,37 @@ public final class ProfileBanner {
         }
         canvas.restore();
         paint.setShader(null);
+        return true;
+    }
+
+    /**
+     * Аватарка (или любое готовое фото) как фон шапки: center-crop и затемнение,
+     * чтобы белые иконки action bar читались на светлых фото.
+     *
+     * @return false, если битмапа ещё нет — вызывающий рисует обычную заливку.
+     */
+    public static boolean drawBitmap(Canvas canvas, Bitmap bmp, int w, int h, int dimPercent) {
+        if (bmp == null || bmp.isRecycled() || w <= 0 || h <= 0) {
+            return false;
+        }
+        final float scale = Math.max((float) w / bmp.getWidth(), (float) h / bmp.getHeight());
+        matrix.reset();
+        matrix.setScale(scale, scale);
+        matrix.postTranslate((w - bmp.getWidth() * scale) / 2f, (h - bmp.getHeight() * scale) / 2f);
+        BitmapShader shader = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+        shader.setLocalMatrix(matrix);
+        paint.setShader(shader);
+        canvas.save();
+        canvas.clipRect(0, 0, w, h);
+        canvas.drawPaint(paint);
+        paint.setShader(null);
+        final int dim = Math.max(0, Math.min(80, dimPercent));
+        if (dim > 0) {
+            dimPaint.setColor(Color.BLACK);
+            dimPaint.setAlpha(dim * 255 / 100);
+            canvas.drawRect(0, 0, w, h, dimPaint);
+        }
+        canvas.restore();
         return true;
     }
 

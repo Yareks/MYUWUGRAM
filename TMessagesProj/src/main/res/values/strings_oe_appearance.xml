@@ -156,9 +156,10 @@
     <string name="OEProfileDrawerHidePhone">Hide phone number in drawer</string>
     <string name="OEProfileDrawerInfo">Background is re-created when the app restarts or the theme changes; hiding the number applies on next drawer open.</string>
     <!-- Баннер-фон страницы профиля -->
+    <string name="OEProfileBannerDefault">Avatar</string>
     <string name="OEProfileBannerPick">Profile background</string>
     <string name="OEProfileBannerReset">Reset profile background</string>
     <string name="OEProfileBannerDim">Profile background dimming</string>
-    <string name="OEProfileBannerInfo">Your image will be shown as the profile header background instead of the color fill.</string>
+    <string name="OEProfileBannerInfo">Every profile header uses that profile's avatar. A custom image replaces it only on your own profile.</string>
     <string name="OEProfileDrawerSectionDrawer2">Profile</string>
 </resources>

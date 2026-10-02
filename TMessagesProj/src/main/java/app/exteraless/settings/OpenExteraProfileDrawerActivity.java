@@ -175,7 +175,7 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
     private String currentProfileBackgroundLabel() {
         return getString(app.exteraless.appearance.ProfileBanner.currentPath() != null
                 ? R.string.OEProfileDrawerBackgroundCustom
-                : R.string.OEProfileDrawerBackgroundDefault);
+                : R.string.OEProfileBannerDefault);
     }
 
     private void pickProfileImage() {

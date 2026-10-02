@@ -1285,6 +1285,46 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         public TopView(Context context) {
             super(context);
             setWillNotDraw(false);
+            headerPhoto.setAllowLoadingOnAttachedOnly(true);
+        }
+
+        /** Большое фото профиля для фона шапки. Пустое, пока аватарка не подгрузилась. */
+        private final ImageReceiver headerPhoto = new ImageReceiver(this);
+        private String headerPhotoKey;
+
+        public void bindHeaderPhoto(ImageLocation location, Object parent) {
+            final String key = location == null ? null : location.photoId + "|" + location.path + "|" + location.imageType;
+            if (key == null ? headerPhotoKey == null : key.equals(headerPhotoKey)) {
+                return;
+            }
+            headerPhotoKey = key;
+            if (location == null) {
+                headerPhoto.clearImage();
+            } else {
+                headerPhoto.setImage(location, "360_360", null, null, parent, 0);
+            }
+            invalidate();
+        }
+
+        /**
+         * Своя картинка — только в своём профиле. Иначе фон шапки это аватарка
+         * (большое фото, а пока его нет — уже загруженный маленький кадр).
+         */
+        private boolean drawHeaderBackground(Canvas canvas, int h) {
+            final int w = getMeasuredWidth();
+            final boolean own = myProfile || (userId != 0 && userId == getUserConfig().getClientUserId());
+            if (own && app.exteraless.appearance.ProfileBanner.draw(canvas, this, w, h)) {
+                return true;
+            }
+            Bitmap headerBitmap = headerPhoto.getBitmap();
+            if ((headerBitmap == null || headerBitmap.isRecycled()) && avatarImage != null && avatarImage.getImageReceiver() != null) {
+                headerBitmap = avatarImage.getImageReceiver().getBitmap();
+                if (headerBitmap == null || headerBitmap.isRecycled()) {
+                    headerBitmap = avatarImage.getImageReceiver().getThumbBitmap();
+                }
+            }
+            final int dim = Math.max(32, app.exteraless.appearance.AppearanceConfig.profileBackgroundDim.Int());
+            return app.exteraless.appearance.ProfileBanner.drawBitmap(canvas, headerBitmap, w, h, dim);
         }
 
         @Override
@@ -1363,12 +1403,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         protected void onAttachedToWindow() {
             super.onAttachedToWindow();
             emoji.attach();
+            headerPhoto.onAttachedToWindow();
         }
 
         @Override
         protected void onDetachedFromWindow() {
             super.onDetachedFromWindow();
             emoji.detach();
+            headerPhoto.onDetachedFromWindow();
         }
 
         public final AnimatedFloat emojiLoadedT = new AnimatedFloat(this, 0, 440, CubicBezierInterpolator.EASE_OUT_QUINT);
@@ -1431,7 +1473,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             int y1 = (int) (v * (1.0f - mediaHeaderAnimationProgress));
 
             if (y1 != 0) {
-                final boolean bannerDrawn = app.exteraless.appearance.ProfileBanner.draw(canvas, this, getMeasuredWidth(), y1);
+                final boolean bannerDrawn = drawHeaderBackground(canvas, y1);
                 paint.setColor(currentColor);
                 updateBackgroundPaint();
                 final float progressToGradient = (playProfileAnimation == 0 ? 1f : avatarAnimationProgress) * hasColorAnimated.set(hasColorById);
@@ -11847,6 +11889,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     avatarImage.setImage(videoLocation, ImageLoader.AUTOPLAY_FILTER, imageLocation, "100_100", thumbLocation, "50_50", avatarDrawable, user);
                 }
             }
+            if (topView != null) {
+                topView.bindHeaderPhoto(vectorAvatar != null ? null : imageLocation, user);
+            }
 
             if (thumbLocation != null && setAvatarRow != -1 || thumbLocation == null && setAvatarRow == -1) {
                 updateListAnimated(false);
@@ -12444,6 +12489,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             if (avatarBig == null && !isTopic) {
                 avatarImage.setImage(videoLocation, filter, thumbLocation, "50_50", avatarDrawable, chat);
+            }
+            if (topView != null) {
+                Object headerParent = chat;
+                if (!isTopic && ChatObject.isMonoForum(currentChat)) {
+                    headerParent = getMessagesController().getMonoForumLinkedChat(currentChat.id);
+                }
+                topView.bindHeaderPhoto(imageLocation, headerParent);
             }
             if (imageLocation != null && (prevLoadedImageLocation == null || imageLocation.photoId != prevLoadedImageLocation.photoId)) {
                 prevLoadedImageLocation = imageLocation;
