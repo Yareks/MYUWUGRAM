@@ -3,7 +3,6 @@ package app.exteraless.appearance;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
-import android.graphics.Color;
 import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Shader;
@@ -101,9 +100,10 @@ public final class ProfileBanner {
         canvas.clipRect(0, 0, w, h);
         canvas.drawPaint(paint);
         paint.setShader(null);
-        final int dim = Math.max(0, Math.min(80, dimPercent));
+        final int dim = ThemeWash.percent(dimPercent);
         if (dim > 0) {
-            dimPaint.setColor(Color.BLACK);
+            dimPaint.setShader(null);
+            dimPaint.setColor(ThemeWash.color());
             dimPaint.setAlpha(dim * 255 / 100);
             canvas.drawRect(0, 0, w, h, dimPaint);
         }

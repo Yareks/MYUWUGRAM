@@ -154,13 +154,13 @@
     <string name="OEProfileDrawerDim">Background dim</string>
     <string name="OEProfileDrawerDimOff">Off</string>
     <string name="OEProfileDrawerHidePhone">Hide phone number in drawer</string>
-    <string name="OEProfileDrawerInfo">Background is re-created when the app restarts or the theme changes. Stretch fills the drawer with the whole picture and does not crop it.</string>
+    <string name="OEProfileDrawerInfo">Background is re-created when the app restarts or the theme changes. Stretch fills the drawer with the whole picture and does not crop it. A light theme lightens the picture.</string>
     <!-- Баннер-фон страницы профиля -->
     <string name="OEProfileBannerDefault">Avatar</string>
     <string name="OEProfileBannerPick">Profile background</string>
     <string name="OEProfileBannerReset">Reset profile background</string>
     <string name="OEProfileBannerDim">Profile background dimming</string>
-    <string name="OEProfileBannerInfo">Every profile header uses the avatar. A custom image replaces it only on your own profile.</string>
+    <string name="OEProfileBannerInfo">Every profile header uses the avatar. A custom image replaces it only on your own profile. A light theme lightens the picture.</string>
     <string name="OEProfileDrawerSectionDrawer2">Profile</string>
     <string name="OEProfileBannerFit">Fill mode</string>
     <string name="OEProfileBannerFitCrop">Crop</string>
@@ -169,4 +169,6 @@
     <string name="OEProfileDrawerFit">Fill mode</string>
     <string name="OEProfileDrawerFitCrop">Crop</string>
     <string name="OEProfileDrawerFitStretch">Stretch</string>
+    <string name="OEProfileDrawerDimLight">Lighten background</string>
+    <string name="OEProfileBannerDimLight">Lighten profile background</string>
 </resources>

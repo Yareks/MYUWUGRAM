@@ -98,7 +98,7 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
             items.add(UItem.asButton(ID_RESET_BG, getString(R.string.OEProfileDrawerResetBackground)));
         }
         items.add(UItem.asButton(ID_DIM, R.drawable.msg_theme,
-                getString(R.string.OEProfileDrawerDim), dimLabel()));
+                drawerDimTitle(), dimLabel()));
         items.add(UItem.asButton(ID_DRAWER_FIT, R.drawable.msg_theme,
                 getString(R.string.OEProfileDrawerFit), drawerFitLabel()));
         items.add(UItem.asShadow(getString(R.string.OEProfileDrawerInfo)));
@@ -110,7 +110,7 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
             items.add(UItem.asButton(ID_RESET_PROFILE_BG, getString(R.string.OEProfileBannerReset)));
         }
         items.add(UItem.asButton(ID_PROFILE_DIM, R.drawable.msg_theme,
-                getString(R.string.OEProfileBannerDim), profileDimLabel()));
+                profileDimTitle(), profileDimLabel()));
         items.add(UItem.asShadow(getString(R.string.OEProfileBannerInfo)));
 
         items.add(UItem.asHeader(getString(R.string.OEProfileDrawerSectionDrawer2)));
@@ -233,8 +233,17 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
         });
     }
 
+    private String profileDimTitle() {
+        return getString(app.exteraless.appearance.ThemeWash.light()
+                ? R.string.OEProfileBannerDimLight
+                : R.string.OEProfileBannerDim);
+    }
+
     private String profileDimLabel() {
         int dim = AppearanceConfig.profileBackgroundDim.Int();
+        if (app.exteraless.appearance.ThemeWash.light()) {
+            dim = Math.max(app.exteraless.appearance.ThemeWash.LIGHT_PERCENT, dim);
+        }
         return dim <= 0 ? getString(R.string.OEProfileDrawerDimOff) : dim + "%";
     }
 
@@ -247,7 +256,7 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
             names[i] = DIM_STEPS[i] <= 0 ? getString(R.string.OEProfileDrawerDimOff) : DIM_STEPS[i] + "%";
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(getString(R.string.OEProfileBannerDim));
+        builder.setTitle(profileDimTitle());
         builder.setItems(names, (dialog, which) -> {
             AppearanceConfig.profileBackgroundDim.setConfigInt(DIM_STEPS[which]);
             updateList();
@@ -324,8 +333,17 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
 
     // ---- затемнение ----
 
+    private String drawerDimTitle() {
+        return getString(app.exteraless.appearance.ThemeWash.light()
+                ? R.string.OEProfileDrawerDimLight
+                : R.string.OEProfileDrawerDim);
+    }
+
     private String dimLabel() {
         int dim = AppearanceConfig.drawerBackgroundDim.Int();
+        if (app.exteraless.appearance.ThemeWash.light()) {
+            dim = Math.max(app.exteraless.appearance.ThemeWash.LIGHT_PERCENT, dim);
+        }
         return dim <= 0 ? getString(R.string.OEProfileDrawerDimOff) : dim + "%";
     }
 
@@ -338,7 +356,7 @@ public class OpenExteraProfileDrawerActivity extends BaseFragment {
             names[i] = DIM_STEPS[i] <= 0 ? getString(R.string.OEProfileDrawerDimOff) : DIM_STEPS[i] + "%";
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(getString(R.string.OEProfileDrawerDim));
+        builder.setTitle(drawerDimTitle());
         builder.setItems(names, (dialog, which) -> {
             AppearanceConfig.drawerBackgroundDim.setConfigInt(DIM_STEPS[which]);
             DrawerContainer.refreshActiveDrawerBackground();

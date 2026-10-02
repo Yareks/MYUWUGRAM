@@ -14,6 +14,8 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
 import org.telegram.ui.ActionBar.Theme;
 
+import app.exteraless.appearance.ThemeWash;
+
 /**
  * Фон панели бокового меню: базовый цвет темы, поверх — опциональная картинка
  * и равномерное затемнение в процентах. По умолчанию center-crop; режим
@@ -69,8 +71,14 @@ public class DrawerBackgroundDrawable extends Drawable {
                         b.top + (b.height() + h) / 2);
             }
             canvas.drawBitmap(bmp, null, tmpRect, bitmapPaint);
-        }
-        if (dim > 0) {
+            final int wash = ThemeWash.percent(dim);
+            if (wash > 0) {
+                dimPaint.setColor(ThemeWash.color());
+                dimPaint.setAlpha(wash * 255 / 100);
+                canvas.drawRect(b, dimPaint);
+            }
+        } else if (dim > 0) {
+            dimPaint.setColor(ThemeWash.light() ? ThemeWash.color() : Color.BLACK);
             dimPaint.setAlpha(dim * 255 / 100);
             canvas.drawRect(b, dimPaint);
         }
