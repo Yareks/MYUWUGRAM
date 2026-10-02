@@ -27,9 +27,7 @@ import java.io.File;
 import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.text.SimpleDateFormat;
 import java.util.Locale;
-import java.util.TimeZone;
 import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -39,22 +37,26 @@ import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.Response;
 import okhttp3.ResponseBody;
-import tw.nekomimi.nekogram.helpers.remote.UpdateHelper;
-import xyz.nextalone.nagram.NaConfig;
+
 
 public final class GitHubUpdater {
 
-    private static final String REPO = "exteraless/exteraless";
+    private static final String REPO = "Yareks/MYUWUGRAM";
     private static final String API = "https://api.github.com/repos/" + REPO;
+    static final String CHANGELOG_URL = "https://raw.githubusercontent.com/Yareks/MYUWUGRAM/main/update/CHANGELOG.md";
     private static final long AUTO_INTERVAL = TimeUnit.HOURS.toMillis(6);
-    private static final String PREFS = "exteraless_updater";
+    private static final String PREFS = "uwugram_updater";
     private static final String KEY_LAST_CHECK = "last_check";
     private static final String KEY_SKIPPED = "skipped_tag";
+    private static final String KEY_CHANGELOG = "changelog";
     private static final Pattern VERSION = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
 
     private static volatile OkHttpClient client;
     private static volatile boolean checking;
+    private static volatile boolean offeredThisProcess;
+    private static volatile boolean sheetVisible;
     private static volatile Call download;
+    private static Runnable listener;
 
     private GitHubUpdater() {
     }
@@ -86,26 +88,92 @@ public final class GitHubUpdater {
         return ApplicationLoader.applicationContext.getSharedPreferences(PREFS, Context.MODE_PRIVATE);
     }
 
+    public static void setListener(Runnable listener) {
+        GitHubUpdater.listener = listener;
+    }
+
+    public static boolean hasUpdate() {
+        Release pending = loadPending();
+        return pending != null && !isSkipped(pending);
+    }
+
+    public static String pendingTitle() {
+        Release pending = loadPending();
+        if (pending == null) {
+            return "";
+        }
+        return TextUtils.isEmpty(pending.name) ? pending.tag : pending.name;
+    }
+
+    public static void showPending() {
+        Release pending = loadPending();
+        if (pending != null) {
+            show(pending);
+        }
+    }
+
+    public static void showChangelog(BaseFragment fragment) {
+        if (fragment == null || fragment.getParentActivity() == null) {
+            return;
+        }
+        new Thread(() -> {
+            String text = null;
+            boolean fetched = false;
+            try {
+                Request request = new Request.Builder().url(CHANGELOG_URL)
+                        .header("User-Agent", "uwugram").build();
+                try (Response response = client().newCall(request).execute()) {
+                    ResponseBody body = response.body();
+                    if (response.isSuccessful() && body != null) {
+                        text = body.string().trim();
+                        fetched = true;
+                        if (!TextUtils.isEmpty(text)) {
+                            prefs().edit().putString(KEY_CHANGELOG, text).apply();
+                        }
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e("GitHubUpdater: changelog failed", e);
+            }
+            final String remote = text;
+            final boolean online = fetched;
+            AndroidUtilities.runOnUIThread(() -> {
+                if (fragment.getParentActivity() == null) {
+                    return;
+                }
+                String notes = !TextUtils.isEmpty(remote) ? remote : prefs().getString(KEY_CHANGELOG, "");
+                if (TextUtils.isEmpty(notes)) {
+                    bulletin(LocaleController.getString(R.string.OpenExteraChangelogEmpty), true);
+                    return;
+                }
+                if (!online) {
+                    bulletin(LocaleController.getString(R.string.OpenExteraChangelogOffline), false);
+                }
+                new ChangelogSheet(fragment.getParentActivity(), fragment.getResourceProvider(),
+                        LocaleController.getString(R.string.OpenExteraChangelogs), notes).show();
+            });
+        }, "gh-changelog").start();
+    }
+
     public static void check(boolean force) {
-        int channel = NaConfig.INSTANCE.getAutoUpdateChannel().Int();
-        if (!force) {
-            if (channel == UpdateHelper.UPDATE_OFF) {
-                return;
+        Release cached = loadPending();
+        if (!force && cached != null && !isSkipped(cached) && !offeredThisProcess) {
+            if (show(cached)) {
+                offeredThisProcess = true;
             }
-            if (Math.abs(System.currentTimeMillis() - prefs().getLong(KEY_LAST_CHECK, 0)) < AUTO_INTERVAL) {
-                return;
-            }
+        }
+        if (!force && Math.abs(System.currentTimeMillis() - prefs().getLong(KEY_LAST_CHECK, 0)) < AUTO_INTERVAL) {
+            return;
         }
         if (checking) {
             return;
         }
         checking = true;
-        final boolean prerelease = channel == UpdateHelper.UPDATE_CHANNEL_BETA;
         new Thread(() -> {
             Release release = null;
             Boolean newer = null;
             try {
-                release = latest(prerelease);
+                release = latest();
                 if (release != null) {
                     newer = isNewer(release);
                 }
@@ -117,9 +185,17 @@ public final class GitHubUpdater {
             final Boolean isNewer = newer;
             AndroidUtilities.runOnUIThread(() -> {
                 checking = false;
-                boolean offer = found != null && (Boolean.TRUE.equals(isNewer) || force && isNewer == null);
-                if (offer && (force || !TextUtils.equals(found.tag, prefs().getString(KEY_SKIPPED, null)))) {
-                    show(found);
+                if (found != null && Boolean.TRUE.equals(isNewer)) {
+                    savePending(found);
+                } else if (Boolean.FALSE.equals(isNewer)) {
+                    clearPending();
+                }
+                notifyListener();
+                Release pending = loadPending();
+                if (pending != null && !isSkipped(pending) && (force || !offeredThisProcess)) {
+                    if (show(pending)) {
+                        offeredThisProcess = true;
+                    }
                 } else if (force) {
                     bulletin(found == null && isNewer == null
                             ? LocaleController.getString(R.string.OEUpdateCheckFailed)
@@ -144,7 +220,7 @@ public final class GitHubUpdater {
     private static JSONObject getJson(String url) throws Exception {
         Request request = new Request.Builder().url(url)
                 .header("Accept", "application/vnd.github+json")
-                .header("User-Agent", "exteraless")
+                .header("User-Agent", "uwugram")
                 .build();
         try (Response response = client().newCall(request).execute()) {
             ResponseBody body = response.body();
@@ -159,15 +235,17 @@ public final class GitHubUpdater {
         }
     }
 
-    private static Release latest(boolean prerelease) throws Exception {
-        JSONObject wrapper = getJson(API + "/releases?per_page=10");
+    private static Release latest() throws Exception {
+        JSONObject wrapper = getJson(API + "/releases?per_page=20");
         JSONArray releases = wrapper == null ? null : wrapper.optJSONArray("items");
         if (releases == null) {
             return null;
         }
+        Release ci = null;
+        Release stable = null;
         for (int i = 0; i < releases.length(); i++) {
             JSONObject item = releases.optJSONObject(i);
-            if (item == null || item.optBoolean("draft") || item.optBoolean("prerelease") && !prerelease) {
+            if (item == null || item.optBoolean("draft")) {
                 continue;
             }
             JSONObject asset = pickAsset(item.optJSONArray("assets"));
@@ -181,9 +259,15 @@ public final class GitHubUpdater {
             release.apkUrl = asset.optString("browser_download_url");
             release.apkName = asset.optString("name");
             release.apkSize = asset.optLong("size");
-            return release;
+            if (release.tag != null && release.tag.startsWith("ci-")) {
+                if (ci == null) {
+                    ci = release;
+                }
+            } else if (!item.optBoolean("prerelease") && stable == null) {
+                stable = release;
+            }
         }
-        return null;
+        return ci != null ? ci : stable;
     }
 
     private static JSONObject pickAsset(JSONArray assets) {
@@ -240,40 +324,41 @@ public final class GitHubUpdater {
     }
 
     private static Boolean isNewer(Release release) throws Exception {
+        String commit = BuildConfig.BUILD_COMMIT_ID;
+        if (release.tag != null && release.tag.startsWith("ci-") && !TextUtils.isEmpty(commit)) {
+            String tagCommit = release.tag.substring(3);
+            if (commit.equalsIgnoreCase(tagCommit) || commit.startsWith(tagCommit) || tagCommit.startsWith(commit)) {
+                return false;
+            }
+        }
         Integer versionOrder = compareVersion(release);
         if (versionOrder != null && versionOrder != 0) {
             return versionOrder > 0;
         }
-        String commit = BuildConfig.BUILD_COMMIT_ID;
-        if (!TextUtils.isEmpty(commit)) {
+        if (!TextUtils.isEmpty(commit) && !TextUtils.isEmpty(release.tag)) {
             JSONObject compare = getJson(API + "/compare/" + commit + "..." + Uri.encode(release.tag));
             if (compare != null) {
+                String status = compare.optString("status");
+                if ("identical".equals(status) || "behind".equals(status)) {
+                    return false;
+                }
                 return compare.optInt("ahead_by", 0) > 0;
             }
         }
-        if (BuildConfig.BUILD_TIMESTAMP > 0) {
-            JSONObject item = getJson(API + "/releases/tags/" + Uri.encode(release.tag));
-            long published = item == null ? 0 : parseDate(item.optString("published_at"));
-            return published > BuildConfig.BUILD_TIMESTAMP * 1000L;
+        if (versionOrder != null && versionOrder < 0) {
+            return false;
         }
-        return versionOrder != null ? Boolean.FALSE : null;
+        return null;
     }
 
-    private static long parseDate(String value) {
-        try {
-            SimpleDateFormat format = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss'Z'", Locale.US);
-            format.setTimeZone(TimeZone.getTimeZone("UTC"));
-            return format.parse(value).getTime();
-        } catch (Exception e) {
-            return 0;
+    private static boolean show(Release release) {
+        if (release == null || sheetVisible || TextUtils.isEmpty(release.apkUrl)) {
+            return false;
         }
-    }
-
-    private static void show(Release release) {
         BaseFragment fragment = LaunchActivity.getSafeLastFragment();
         Activity activity = fragment == null ? null : fragment.getParentActivity();
         if (activity == null) {
-            return;
+            return false;
         }
         String size = release.apkSize > 0 ? AndroidUtilities.formatFileSize(release.apkSize) : "";
         int[] remote = version(release.tag, release.name, release.apkName);
@@ -287,7 +372,7 @@ public final class GitHubUpdater {
         String notes = TextUtils.isEmpty(release.body) ? release.tag : release.body;
         String updateText = size.isEmpty() ? LocaleController.getString(R.string.OEUpdateInstall)
                 : LocaleController.formatString(R.string.OEUpdateInstallSize, size);
-        new UpdateSheet(activity, fragment.getResourceProvider(), LocaleController.getString(R.string.OEUpdateTitle),
+        UpdateSheet sheet = new UpdateSheet(activity, fragment.getResourceProvider(), LocaleController.getString(R.string.OEUpdateTitle),
                 subtitle.toString(), notes, updateText, new UpdateSheet.Delegate() {
             @Override
             public void onUpdate(UpdateSheet sheet) {
@@ -297,6 +382,8 @@ public final class GitHubUpdater {
             @Override
             public void onSkip() {
                 prefs().edit().putString(KEY_SKIPPED, release.tag).apply();
+                clearPending();
+                notifyListener();
             }
 
             @Override
@@ -306,7 +393,60 @@ public final class GitHubUpdater {
                     call.cancel();
                 }
             }
-        }).show();
+        });
+        sheet.setOnDismissListener(() -> sheetVisible = false);
+        sheetVisible = true;
+        sheet.show();
+        return true;
+    }
+
+    private static boolean isSkipped(Release release) {
+        return release != null && TextUtils.equals(release.tag, prefs().getString(KEY_SKIPPED, null));
+    }
+
+    private static void savePending(Release release) {
+        prefs().edit()
+                .putString("pending_tag", release.tag)
+                .putString("pending_name", release.name)
+                .putString("pending_body", release.body)
+                .putString("pending_url", release.apkUrl)
+                .putString("pending_apk", release.apkName)
+                .putLong("pending_size", release.apkSize)
+                .apply();
+    }
+
+    private static void clearPending() {
+        prefs().edit()
+                .remove("pending_tag")
+                .remove("pending_name")
+                .remove("pending_body")
+                .remove("pending_url")
+                .remove("pending_apk")
+                .remove("pending_size")
+                .apply();
+    }
+
+    private static Release loadPending() {
+        String url = prefs().getString("pending_url", "");
+        String tag = prefs().getString("pending_tag", "");
+        if (TextUtils.isEmpty(url) || TextUtils.isEmpty(tag)) {
+            return null;
+        }
+        Release release = new Release();
+        release.tag = tag;
+        release.name = prefs().getString("pending_name", tag);
+        release.body = prefs().getString("pending_body", "");
+        release.apkUrl = url;
+        release.apkName = prefs().getString("pending_apk", "uwugram.apk");
+        release.apkSize = prefs().getLong("pending_size", 0);
+        return release;
+    }
+
+    private static void notifyListener() {
+        Runnable current = listener;
+        if (current != null) {
+            current.run();
+        }
     }
 
     private static void download(Activity activity, UpdateSheet sheet, Release release) {
@@ -327,7 +467,7 @@ public final class GitHubUpdater {
         File target = new File(dir, release.apkName.replaceAll("[^A-Za-z0-9._-]", "_"));
         sheet.setDownloading(true);
         Call call = client().newCall(new Request.Builder().url(release.apkUrl)
-                .header("User-Agent", "exteraless").build());
+                .header("User-Agent", "uwugram").build());
         download = call;
         new Thread(() -> {
             boolean ok = false;

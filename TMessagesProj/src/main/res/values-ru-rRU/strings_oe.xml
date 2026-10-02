@@ -116,4 +116,15 @@
     <string name="AppIconUwu28Boy">Граффити</string>
     <string name="AppIconUwu28Kitty">Граффити кот</string>
     <string name="OpenExteraAi">ИИ</string>
+    <string name="OpenExteraUpdates">Обновления</string>
+    <string name="OpenExteraUpdateCurrent">Актуальная</string>
+    <string name="OpenExteraChangelogs">Changelogs</string>
+    <string name="OpenExteraUpdateAction">Обновить</string>
+    <string name="OpenExteraChangeChannel">Сменить канал</string>
+    <string name="OpenExteraChangeChannelHint">Юзернейм</string>
+    <string name="OpenExteraChannelNotFound">Канал не найден</string>
+    <string name="OpenExteraChannelChanged">Канал обновлён для всех</string>
+    <string name="OpenExteraChannelSavedLocal">Сохранено на этом устройстве. Не удалось опубликовать смену.</string>
+    <string name="OpenExteraChangelogEmpty">Список изменений пуст.</string>
+    <string name="OpenExteraChangelogOffline">Показана последняя полученная копия.</string>
 </resources>

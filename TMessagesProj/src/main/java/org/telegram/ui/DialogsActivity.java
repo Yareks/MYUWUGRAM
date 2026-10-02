@@ -7241,6 +7241,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     @Override
     public void onResume() {
         super.onResume();
+        if (actionBar != null && actionBar.getTitleTextView() != null && folderId == 0 && !onlySelect) {
+            CharSequence currentTitle = actionBar.getTitleTextView().getText();
+            if (currentTitle != null) {
+                String plain = currentTitle.toString();
+                if (plain.contains("exteraless") || plain.contains("Exteraless") || plain.contains("uwugram") || plain.contains("UwUgram")) {
+                    actionBar.setTitle(actionBarTitleNax = tw.nekomimi.nekogram.helpers.TypefaceHelper.getTitleText(currentAccount), statusDrawable);
+                }
+            }
+        }
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }

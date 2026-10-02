@@ -5,7 +5,10 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.Typeface;
+import android.graphics.drawable.Drawable;
+import android.text.style.ReplacementSpan;
 import android.graphics.fonts.Font;
 import android.graphics.fonts.SystemFonts;
 import android.os.Build;
@@ -24,6 +27,7 @@ import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.TypefaceSpan;
+import org.telegram.ui.LauncherIconController;
 
 import java.io.File;
 import java.util.List;
@@ -319,12 +323,18 @@ public class TypefaceHelper {
         String title = (String) NaConfig.INSTANCE.getCustomTitle().defaultValue;
         // openExtera: заголовок списка чатов (AppearanceConfig.titleText).
         // Перенесено из exteraGram 12.9.0, LocaleUtils.getActionBarTitle(int).
-        // 0 — имя приложения (NagramX customTitle), 1 — username, 2 — имя, 3 — «Чаты».
+        // 0 — имя приложения, рядом иконка клиента. 1 — username, 2 — имя, 3 — «Чаты».
         final int oeTitleText = app.exteraless.appearance.AppearanceConfig.titleText();
+        if (oeTitleText == 0 || "exteraless".equalsIgnoreCase(title)) {
+            return brandedTitle();
+        }
         if (oeTitleText == 3) {
             title = LocaleController.getString(R.string.FilterChats);
         } else if (oeTitleText == app.exteraless.appearance.AppearanceConfig.TITLE_TEXT_CUSTOM) {
             String customTitle = NaConfig.INSTANCE.getCustomTitle().String();
+            if ("exteraless".equalsIgnoreCase(customTitle)) {
+                return brandedTitle();
+            }
             if (!TextUtils.isEmpty(customTitle)) {
                 title = customTitle;
             }
@@ -345,6 +355,52 @@ public class TypefaceHelper {
         Typeface titleTypeface = NekoConfig.typeface.Bool() && NekoConfig.forceFontWeightFallback.Bool() ? createTypeface(700, false) : createTypeface(600, false);
         builder.setSpan(new TypefaceSpan(titleTypeface, 0, Theme.key_telegram_color_dialogsLogo, null), 0, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return builder;
+    }
+
+    /** Иконка выбранного клиента и подпись uwugram вместо exteraless. */
+    private static SpannableStringBuilder brandedTitle() {
+        SpannableStringBuilder builder = new SpannableStringBuilder("\uFFFC uwugram");
+        Drawable icon = LauncherIconController.currentDrawable(ApplicationLoader.applicationContext);
+        builder.setSpan(new IconSpan(icon, dp(20)), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        builder.setSpan(new LeadingMarginSpan.Standard(dp(2), 0), 0, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        Typeface titleTypeface = NekoConfig.typeface.Bool() && NekoConfig.forceFontWeightFallback.Bool() ? createTypeface(700, false) : createTypeface(600, false);
+        builder.setSpan(new TypefaceSpan(titleTypeface, 0, Theme.key_telegram_color_dialogsLogo, null), 2, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return builder;
+    }
+
+    private static final class IconSpan extends ReplacementSpan {
+        private final Drawable drawable;
+        private final int size;
+        private final Path clip = new Path();
+
+        IconSpan(Drawable drawable, int size) {
+            this.drawable = drawable;
+            this.size = size;
+            if (drawable != null) {
+                drawable.setBounds(0, 0, size, size);
+            }
+        }
+
+        @Override
+        public int getSize(Paint paint, CharSequence text, int start, int end, Paint.FontMetricsInt fm) {
+            return size + dp(6);
+        }
+
+        @Override
+        public void draw(Canvas canvas, CharSequence text, int start, int end, float x, int top, int y, int bottom, Paint paint) {
+            if (drawable == null) {
+                return;
+            }
+            int transY = y + (paint.getFontMetricsInt().ascent + paint.getFontMetricsInt().descent - size) / 2;
+            canvas.save();
+            canvas.translate(x, transY);
+            clip.rewind();
+            float radius = size * 0.28f;
+            clip.addRoundRect(0, 0, size, size, radius, radius, Path.Direction.CW);
+            canvas.clipPath(clip);
+            drawable.draw(canvas);
+            canvas.restore();
+        }
     }
 
 }

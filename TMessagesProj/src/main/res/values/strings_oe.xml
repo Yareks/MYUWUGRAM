@@ -126,4 +126,15 @@
     <string name="AppIconUwu28Boy">Graffiti</string>
     <string name="AppIconUwu28Kitty">Graffiti kit</string>
     <string name="OpenExteraAi">AI</string>
+    <string name="OpenExteraUpdates">Updates</string>
+    <string name="OpenExteraUpdateCurrent">Current</string>
+    <string name="OpenExteraChangelogs">Changelogs</string>
+    <string name="OpenExteraUpdateAction">Update</string>
+    <string name="OpenExteraChangeChannel">Change channel</string>
+    <string name="OpenExteraChangeChannelHint">Username</string>
+    <string name="OpenExteraChannelNotFound">Channel not found</string>
+    <string name="OpenExteraChannelChanged">Channel updated for everyone</string>
+    <string name="OpenExteraChannelSavedLocal">Saved on this device. Could not publish the change.</string>
+    <string name="OpenExteraChangelogEmpty">Changelog is empty.</string>
+    <string name="OpenExteraChangelogOffline">Showing the last received changelog.</string>
 </resources>

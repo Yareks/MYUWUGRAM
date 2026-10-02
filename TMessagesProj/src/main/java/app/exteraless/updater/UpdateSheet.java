@@ -218,7 +218,7 @@ public class UpdateSheet extends BottomSheet {
         super.dismiss();
     }
 
-    static CharSequence format(String text) {
+    public static CharSequence format(String text) {
         String prepared = (text == null ? "" : text).replace("\r", "").trim()
                 .replaceAll("(?m)^\\s{0,3}#{1,6}\\s*(.+)$", "**$1**")
                 .replaceAll("(?m)^\\s{0,3}[*-]\\s+", "• ");
