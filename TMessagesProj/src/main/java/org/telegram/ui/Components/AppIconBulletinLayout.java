@@ -35,11 +35,12 @@ public class AppIconBulletinLayout extends Bulletin.ButtonLayout {
         addView(textView, LayoutHelper.createFrameRelatively(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.START | Gravity.CENTER_VERTICAL, 56, 0, 16, 0));
 
         // NekoX: try to fix NekoX icon
+        boolean fullArt = LauncherIconController.isFullArt(icon);
         imageView.setImageDrawable(ContextCompat.getDrawable(context, icon.background));
         imageView.setOuterPadding(AndroidUtilities.dp(8));
         imageView.setBackgroundOuterPadding(AndroidUtilities.dp(24));
-        imageView.setForeground(icon.foreground);
-        imageView.setIsNekoXIcon(false);
+        imageView.setForeground(fullArt ? 0 : icon.foreground);
+        imageView.setIsNekoXIcon(fullArt);
         textView.setText(AndroidUtilities.replaceTags(LocaleController.formatString(R.string.AppIconChangedTo, LocaleController.getString(icon.title))));
     }
 }

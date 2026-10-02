@@ -151,6 +151,10 @@
     <string name="OEProfileBannerPick">Фон профиля</string>
     <string name="OEProfileBannerReset">Сбросить фон профиля</string>
     <string name="OEProfileBannerDim">Затемнение фона профиля</string>
-    <string name="OEProfileBannerInfo">Шапка любого профиля — аватарка. Своя картинка заменяет её только в вашем профиле.</string>
+    <string name="OEProfileBannerInfo">Шапка любого профиля — аватарка. Своя картинка заменяет её только в вашем профиле. Режим заполнения показывает картинку целиком, без обрезки.</string>
     <string name="OEProfileDrawerSectionDrawer2">Профиль</string>
+    <string name="OEProfileBannerFit">Заполнение</string>
+    <string name="OEProfileBannerFitCrop">Обрезать</string>
+    <string name="OEProfileBannerFitWhole">Без обрезки</string>
+    <string name="OEAiHubInfo">Ассистент, расшифровка голоса и скрытие встроенных функций ИИ.</string>
 </resources>

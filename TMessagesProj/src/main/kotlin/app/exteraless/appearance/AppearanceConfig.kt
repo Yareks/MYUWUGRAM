@@ -88,6 +88,11 @@ object AppearanceConfig {
     val profileBackgroundDim =
         addConfig("OEAppearanceProfileBgDim", ConfigItem.configTypeInt, 30)
 
+    /** true — картинка шапки целиком, без обрезки. false — center-crop. */
+    @JvmField
+    val profileBackgroundFit =
+        addConfig("OEAppearanceProfileBgFit", ConfigItem.configTypeBool, false)
+
     /**
      * Какой набор темы Monet берут «Monet Light/Dark/AMOLED».
      *

@@ -8,10 +8,17 @@ import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.R;
 
 public class LauncherIconController {
-    /** Фирменная, классика Telegram и набор UwU (бойкиссер / котик). */
+    /** Классика Telegram и набор UwU. Стандартная exteraless-иконка убрана:
+     *  её место занимает тёмный кот, он же пункт по умолчанию. */
     public static boolean isAvailableInSelector(LauncherIcon icon) {
         return icon == LauncherIcon.EXTERALESS
                 || icon == LauncherIcon.TELEGRAM
+                || (icon.key != null && icon.key.startsWith("Uwu") && icon != LauncherIcon.UWU12KITTY);
+    }
+
+    /** Готовая картинка целиком, без зума adaptive-foreground. */
+    public static boolean isFullArt(LauncherIcon icon) {
+        return icon == LauncherIcon.EXTERALESS
                 || (icon.key != null && icon.key.startsWith("Uwu"));
     }
 
@@ -49,8 +56,8 @@ public class LauncherIconController {
     }
 
     public enum LauncherIcon {
-        EXTERALESS("ExteralessIcon", R.drawable.exteraless_icon_background,
-                R.drawable.exteraless_icon_foreground, R.string.AppIconExteraless),
+        EXTERALESS("ExteralessIcon", R.drawable.uwu_icon_12_kitty,
+                R.drawable.app_icon_empty_foreground, R.string.AppIconExteraless),
         UWU01BOY("Uwu01Boy", R.drawable.uwu_icon_01_boy,
                 R.drawable.app_icon_empty_foreground, R.string.AppIconUwu01Boy),
         UWU01KITTY("Uwu01Kitty", R.drawable.uwu_icon_01_kitty,

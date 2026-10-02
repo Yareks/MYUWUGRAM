@@ -160,6 +160,10 @@
     <string name="OEProfileBannerPick">Profile background</string>
     <string name="OEProfileBannerReset">Reset profile background</string>
     <string name="OEProfileBannerDim">Profile background dimming</string>
-    <string name="OEProfileBannerInfo">Every profile header uses the avatar. A custom image replaces it only on your own profile.</string>
+    <string name="OEProfileBannerInfo">Every profile header uses the avatar. A custom image replaces it only on your own profile. Fill mode can show the whole picture without cropping.</string>
     <string name="OEProfileDrawerSectionDrawer2">Profile</string>
+    <string name="OEProfileBannerFit">Fill mode</string>
+    <string name="OEProfileBannerFitCrop">Crop</string>
+    <string name="OEProfileBannerFitWhole">Whole image</string>
+    <string name="OEAiHubInfo">Assistant, voice transcription and hiding of built-in AI features.</string>
 </resources>

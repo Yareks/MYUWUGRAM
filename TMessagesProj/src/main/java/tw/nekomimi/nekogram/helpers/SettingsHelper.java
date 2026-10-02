@@ -24,6 +24,7 @@ import java.util.Set;
 import app.exteraless.pillstack.PillStackSettingsActivity;
 import app.exteraless.plugins.ui.PluginsActivity;
 import app.exteraless.settings.OpenExteraAppNavigationActivity;
+import app.exteraless.settings.OpenExteraAiActivity;
 import app.exteraless.settings.OpenExteraAppearanceActivity;
 import app.exteraless.settings.OpenExteraAyuMomentsActivity;
 import app.exteraless.settings.OpenExteraChatsActivity;
@@ -336,6 +337,7 @@ public class SettingsHelper {
         exteralessFragments.add(new OpenExteraGeneralActivity());
         exteralessFragments.add(new OpenExteraAppearanceActivity());
         exteralessFragments.add(new OpenExteraChatsActivity());
+        exteralessFragments.add(new OpenExteraAiActivity());
         exteralessFragments.add(new OpenExteraOtherActivity());
         exteralessFragments.add(new OpenExteraAyuMomentsActivity());
         exteralessFragments.add(new PillStackSettingsActivity());

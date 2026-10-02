@@ -349,7 +349,7 @@ public class Client {
                 .addHeader("Content-Type", "application/json")
                 .addHeader("Authorization", "Bearer " + service.getKey())
                 .addHeader("HTTP-Referer", "https://github.com/exteraless/exteraless")
-                .addHeader("X-Title", "exteraless")
+                .addHeader("X-Title", "UwUgram")
                 .post(RequestBody.create(body.toString(), JSON))
                 .build();
     }

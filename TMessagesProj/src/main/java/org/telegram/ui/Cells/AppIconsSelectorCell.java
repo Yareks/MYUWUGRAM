@@ -79,8 +79,9 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
                 LauncherIconController.LauncherIcon icon = availableIcons.get(position);
                 holderView.bind(icon);
                 holderView.iconView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(ICONS_ROUND_RADIUS), Color.TRANSPARENT, Theme.getColor(Theme.key_listSelector), Color.BLACK));
-                holderView.iconView.setForeground(icon.foreground);
-                holderView.iconView.setIsNekoXIcon(false);
+                boolean fullArt = LauncherIconController.isFullArt(icon);
+                holderView.iconView.setForeground(fullArt ? 0 : icon.foreground);
+                holderView.iconView.setIsNekoXIcon(fullArt);
             }
 
             @Override
@@ -309,7 +310,7 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
         }
 
         public void setForeground(int res) {
-            foreground = ContextCompat.getDrawable(getContext(), res);
+            foreground = res == 0 ? null : ContextCompat.getDrawable(getContext(), res);
             invalidate();
         }
 

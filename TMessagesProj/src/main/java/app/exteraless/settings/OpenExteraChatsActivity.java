@@ -339,7 +339,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         stickerShapeDividerRow = addRow();
 
         linksHeaderRow = addRow("linksHeader");
-        aiChatRow = addRow("aiChat");
+        aiChatRow = -1;
         chatSettingsRow = addRow("chatSettings");
         linksDividerRow = addRow();
 
@@ -604,15 +604,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         }
         videosDividerRow = addRow();
 
-        transcribeHeaderRow = addRow("transcribeHeader");
-        transcribeProviderRow = addRow("transcribeProvider", "TranscribeProviderShort");
-        cloudflareCredentialsRow = addRow("cloudflareCredentials", "CloudflareCredentials");
-        geminiApiKeyRow = addRow("llmProviderGeminiKey", "LlmProviderGeminiKey");
-        openAiCredentialsRow = NaConfig.INSTANCE.getTranscribeProvider().Int() == TranscribeHelper.TRANSCRIBE_OPENAI
-                ? addRow("transcribeProviderOpenAI", "TranscribeProviderOpenAI") : -1;
-        voskModelsRow = NaConfig.INSTANCE.getTranscribeProvider().Int() == TranscribeHelper.TRANSCRIBE_VOSK
-                ? addRow("voskModels", "VoskModelsShort") : -1;
-        transcribeDividerRow = addRow();
+        // Расшифровка и ключи ИИ перенесены в пункт «ИИ».
+        transcribeHeaderRow = transcribeProviderRow = cloudflareCredentialsRow = -1;
+        geminiApiKeyRow = openAiCredentialsRow = voskModelsRow = transcribeDividerRow = -1;
     }
 
     @Override
@@ -2516,7 +2510,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         }
 
         private void bindInfo(TextInfoPrivacyCell cell, int position) {
-            boolean bottom = position == transcribeDividerRow;
+            boolean bottom = position == videosDividerRow;
             cell.setFixedSize(0);
             if (position == doubleTapDividerRow) {
                 cell.setText(getString(R.string.OEChatsDoubleTapInfo));

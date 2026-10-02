@@ -179,7 +179,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         return Arrays.asList(
                 new CollapsibleGroup(() -> md3Expanded, expanded -> md3Expanded = expanded),
                 new CollapsibleGroup(() -> iosExpanded, expanded -> iosExpanded = expanded),
-                new CollapsibleGroup(() -> hideAiExpanded, expanded -> hideAiExpanded = expanded),
                 new CollapsibleGroup(() -> hideSettingsExpanded, expanded -> hideSettingsExpanded = expanded));
     }
 
@@ -248,14 +247,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else {
             iosNavBarRow = iosChatHeaderRow = -1;
         }
-        hideAiGroupRow = addRow("hideAi");
-        if (hideAiExpanded) {
-            hideAiEditorRow = addRow("hideAiEditor");
-            hideAiSummaryRow = addRow("hideAiSummary");
-            hideAiIvRow = addRow("hideAiIv");
-        } else {
-            hideAiEditorRow = hideAiSummaryRow = hideAiIvRow = -1;
-        }
+        // Скрытие AI живёт в отдельном пункте «ИИ», не здесь.
+        hideAiGroupRow = hideAiEditorRow = hideAiSummaryRow = hideAiIvRow = -1;
         hideSettingsGroupRow = addRow("hideSettingsSections", "HidePremiumSection", "HideHelpSection");
         if (hideSettingsExpanded) {
             hidePremiumSectionRow = addRow("hidePremiumSection", "HidePremiumSection");
