@@ -2956,7 +2956,7 @@ public class ActionBarMenuItem extends FrameLayout {
     private void applySubItemOrderInner() {
         reorderLazyItems();
         reorderPopupChildren();
-        HashSet<Integer> hidden = subItemHidden == null ? Collections.<Integer>emptySet() : subItemHidden;
+        HashSet<Integer> hidden = subItemHidden != null ? subItemHidden : new HashSet<Integer>();
         if (forcedHidden != null) {
             ArrayList<Integer> release = null;
             for (Integer id : forcedHidden) {
