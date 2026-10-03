@@ -92,7 +92,9 @@ import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundProvider
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
+import java.util.HashSet;
 
 import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.android.animator.FactorAnimator;
@@ -519,6 +521,7 @@ public class ActionBarMenuItem extends FrameLayout {
     }
 
     public void removeAllSubItems() {
+        clearSubItemOrder();
         if (popupLayout == null) {
             return;
         }
@@ -2233,6 +2236,9 @@ public class ActionBarMenuItem extends FrameLayout {
     }
 
     public void showSubItem(int id, boolean animated) {
+        if (subItemHidden != null && subItemHidden.contains(id)) {
+            return;
+        }
         Item lazyItem = findLazyItem(id);
         if (lazyItem != null) {
             lazyItem.setVisibility(VISIBLE);
@@ -2620,6 +2626,12 @@ public class ActionBarMenuItem extends FrameLayout {
 
     private ArrayList<Item> lazyList;
     private HashMap<Integer, Item> lazyMap;
+    private int[] subItemOrder;
+    private HashSet<Integer> subItemHidden;
+    private HashSet<Integer> forcedHidden;
+    private Runnable subOrderRefresher;
+    private boolean applyingSubOrder;
+    private boolean layingOutLazy;
 
     public static class Item {
         public int viewType;
@@ -2896,14 +2908,212 @@ public class ActionBarMenuItem extends FrameLayout {
         return lazyMap.get(id);
     }
 
-    private void layoutLazyItems() {
-        if (lazyList == null) {
+    /**
+     * Порядок и скрытые id пунктов «⋮». null сбрасывает правку.
+     * Вызывается перед показом меню ещё раз, чтобы подтянуть поздние пункты.
+     */
+    public void setSubItemOrder(int[] order, int[] hidden) {
+        subItemOrder = order;
+        subItemHidden = toIdSet(hidden);
+        applySubItemOrder();
+    }
+
+    public void clearSubItemOrder() {
+        subItemOrder = null;
+        subItemHidden = null;
+        applySubItemOrder();
+    }
+
+    public void setSubOrderRefresher(Runnable refresher) {
+        subOrderRefresher = refresher;
+    }
+
+    private static HashSet<Integer> toIdSet(int[] ids) {
+        if (ids == null || ids.length == 0) {
+            return null;
+        }
+        HashSet<Integer> set = new HashSet<>();
+        for (int id : ids) {
+            if (id != 0) {
+                set.add(id);
+            }
+        }
+        return set.isEmpty() ? null : set;
+    }
+
+    private void applySubItemOrder() {
+        if (applyingSubOrder) {
             return;
         }
-        for (int i = 0; i < lazyList.size(); ++i) {
-            lazyList.get(i).add(this);
+        applyingSubOrder = true;
+        try {
+            applySubItemOrderInner();
+        } finally {
+            applyingSubOrder = false;
         }
-        lazyList.clear();
+    }
+
+    private void applySubItemOrderInner() {
+        reorderLazyItems();
+        reorderPopupChildren();
+        HashSet<Integer> hidden = subItemHidden == null ? Collections.<Integer>emptySet() : subItemHidden;
+        if (forcedHidden != null) {
+            ArrayList<Integer> release = null;
+            for (Integer id : forcedHidden) {
+                if (!hidden.contains(id)) {
+                    if (release == null) {
+                        release = new ArrayList<>();
+                    }
+                    release.add(id);
+                }
+            }
+            if (release != null) {
+                for (Integer id : release) {
+                    setSubItemVisibilityDirect(id, VISIBLE);
+                    forcedHidden.remove(id);
+                }
+            }
+        }
+        if (!hidden.isEmpty()) {
+            if (forcedHidden == null) {
+                forcedHidden = new HashSet<>();
+            }
+            for (Integer id : hidden) {
+                setSubItemVisibilityDirect(id, GONE);
+                forcedHidden.add(id);
+            }
+        }
+    }
+
+    private void setSubItemVisibilityDirect(int id, int visibility) {
+        Item lazyItem = findLazyItem(id);
+        if (lazyItem != null) {
+            lazyItem.setVisibility(visibility);
+        }
+        if (popupLayout == null) {
+            return;
+        }
+        View view = popupLayout.findViewWithTag(id);
+        if (view != null && view.getVisibility() != visibility) {
+            view.setVisibility(visibility);
+            measurePopup = true;
+        }
+    }
+
+    private static int viewTagId(View view) {
+        if (view == null) {
+            return 0;
+        }
+        Object tag = view.getTag();
+        return tag instanceof Integer ? (Integer) tag : 0;
+    }
+
+    private void reorderLazyItems() {
+        if (lazyList == null || lazyList.size() < 2 || subItemOrder == null || subItemOrder.length == 0) {
+            return;
+        }
+        HashMap<Integer, Integer> rank = new HashMap<>();
+        for (int i = 0; i < subItemOrder.length; i++) {
+            if (subItemOrder[i] != 0) {
+                rank.put(subItemOrder[i], i);
+            }
+        }
+        if (rank.isEmpty()) {
+            return;
+        }
+        ArrayList<Integer> slots = new ArrayList<>();
+        ArrayList<Item> picked = new ArrayList<>();
+        for (int i = 0; i < lazyList.size(); i++) {
+            Item item = lazyList.get(i);
+            if (item.id != 0 && rank.containsKey(item.id)) {
+                slots.add(i);
+                picked.add(item);
+            }
+        }
+        if (picked.size() < 2) {
+            return;
+        }
+        Collections.sort(picked, (a, b) -> rank.get(a.id) - rank.get(b.id));
+        for (int i = 0; i < slots.size(); i++) {
+            lazyList.set(slots.get(i), picked.get(i));
+        }
+    }
+
+    private void reorderPopupChildren() {
+        if (popupLayout == null || popupLayout.linearLayout == null || subItemOrder == null || subItemOrder.length == 0) {
+            return;
+        }
+        LinearLayout box = popupLayout.linearLayout;
+        int count = box.getChildCount();
+        if (count < 2) {
+            return;
+        }
+        HashMap<Integer, Integer> rank = new HashMap<>();
+        for (int i = 0; i < subItemOrder.length; i++) {
+            if (subItemOrder[i] != 0) {
+                rank.put(subItemOrder[i], i);
+            }
+        }
+        if (rank.isEmpty()) {
+            return;
+        }
+        ArrayList<View> children = new ArrayList<>(count);
+        for (int i = 0; i < count; i++) {
+            children.add(box.getChildAt(i));
+        }
+        ArrayList<Integer> slots = new ArrayList<>();
+        ArrayList<View> picked = new ArrayList<>();
+        for (int i = 0; i < children.size(); i++) {
+            int id = viewTagId(children.get(i));
+            if (id != 0 && rank.containsKey(id)) {
+                slots.add(i);
+                picked.add(children.get(i));
+            }
+        }
+        if (picked.size() < 2) {
+            return;
+        }
+        Collections.sort(picked, (a, b) -> rank.get(viewTagId(a)) - rank.get(viewTagId(b)));
+        boolean changed = false;
+        for (int i = 0; i < slots.size(); i++) {
+            if (children.get(slots.get(i)) != picked.get(i)) {
+                changed = true;
+                children.set(slots.get(i), picked.get(i));
+            }
+        }
+        if (!changed) {
+            return;
+        }
+        box.removeAllViews();
+        for (View child : children) {
+            box.addView(child);
+        }
+        measurePopup = true;
+        popupLayout.updateRadialSelectors();
+    }
+
+    private void layoutLazyItems() {
+        if (layingOutLazy) {
+            return;
+        }
+        layingOutLazy = true;
+        try {
+            if (subOrderRefresher != null) {
+                subOrderRefresher.run();
+            } else {
+                applySubItemOrder();
+            }
+            if (lazyList == null) {
+                return;
+            }
+            for (int i = 0; i < lazyList.size(); ++i) {
+                lazyList.get(i).add(this);
+            }
+            lazyList.clear();
+            applySubItemOrder();
+        } finally {
+            layingOutLazy = false;
+        }
     }
 
     public static FrameLayout addColoredGap(ActionBarPopupWindow.ActionBarPopupWindowLayout windowLayout, Theme.ResourcesProvider resourcesProvider) {

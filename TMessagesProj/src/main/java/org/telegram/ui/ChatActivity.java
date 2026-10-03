@@ -19,6 +19,7 @@ import app.exteraless.chats.ChatsConfig;
 import app.exteraless.components.ActionRow;
 import app.exteraless.components.MessageDetailsPopupWrapper;
 import app.exteraless.appearance.GlassMenuHelper;
+import app.exteraless.menu.OverflowMenus;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.lerp;
@@ -5007,9 +5008,10 @@ public class ChatActivity extends BaseFragment implements
             if (allowShowPinned) {
                 headerItem.lazilyAddSubItem(nkheaderbtn_show_pinned, R.drawable.msg_pin, LocaleController.getString("PinnedMessage", R.string.PinnedMessage));
             }
+            final int overflowKind = OverflowMenus.kindForChat(currentUser, currentChat);
             if (ChatObject.isBoostSupported(currentChat) && (getUserConfig().isPremium() || ChatObject.isBoosted(chatInfo) || ChatObject.hasAdminRights(currentChat))) {
                 RLottieDrawable drawable = new RLottieDrawable(R.raw.boosts, dp(24), dp(24));
-                if (NaConfig.INSTANCE.getChatMenuItemBoostGroup().Bool()) headerItem.lazilyAddSubItem(boost_group, drawable, LocaleController.getString(ChatObject.isChannelAndNotMegaGroup(currentChat) ? R.string.BoostingBoostChannelMenu : R.string.BoostingBoostGroupMenu));
+                if (OverflowMenus.include(overflowKind, boost_group, NaConfig.INSTANCE.getChatMenuItemBoostGroup().Bool())) headerItem.lazilyAddSubItem(boost_group, drawable, LocaleController.getString(ChatObject.isChannelAndNotMegaGroup(currentChat) ? R.string.BoostingBoostChannelMenu : R.string.BoostingBoostGroupMenu));
             }
             translateItem = headerItem.lazilyAddSubItem(translate, LlmConfig.llmIsDefaultProvider() ? R.drawable.magic_stick_solar : R.drawable.msg_translate, LocaleController.getString(R.string.TranslateMessage));
             updateTranslateItemVisibility();
@@ -5027,7 +5029,7 @@ public class ChatActivity extends BaseFragment implements
                     text = getString(R.string.LinkedChannelChat);
                     draw = R.drawable.msg_channel;
                 }
-                if (NaConfig.INSTANCE.getChatMenuItemLinkedChat().Bool()) headerItem.lazilyAddSubItem(nkheaderbtn_linked_chat, draw, text);
+                if (OverflowMenus.include(overflowKind, nkheaderbtn_linked_chat, NaConfig.INSTANCE.getChatMenuItemLinkedChat().Bool())) headerItem.lazilyAddSubItem(nkheaderbtn_linked_chat, draw, text);
             }
             if (currentUser != null && currentUser.id != UserObject.VERIFY && currentUser.id != UserObject.REPLY_BOT) {
                 addContactItem = headerItem.lazilyAddSubItem(share_contact, R.drawable.msg_addcontact, LocaleController.getString(R.string.AddToContacts));
@@ -5049,17 +5051,17 @@ public class ChatActivity extends BaseFragment implements
                     LocaleController.getString(UserObject.isBotForum(currentUser) ? R.string.ClearAllHistory : R.string.ClearHistory));
             }
             boolean addedSettings = false;
-            if (NaConfig.INSTANCE.getChatMenuItemToBeginning().Bool()) headerItem.lazilyAddSubItem(to_the_beginning, R.drawable.ic_upward, getString(R.string.ToTheBeginning));
-            if (NaConfig.INSTANCE.getChatMenuItemGoToMessage().Bool()) headerItem.lazilyAddSubItem(to_the_message, R.drawable.msg_go_up, getString(R.string.ToTheMessage));
-            if (NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
+            if (OverflowMenus.include(overflowKind, to_the_beginning, NaConfig.INSTANCE.getChatMenuItemToBeginning().Bool())) headerItem.lazilyAddSubItem(to_the_beginning, R.drawable.ic_upward, getString(R.string.ToTheBeginning));
+            if (OverflowMenus.include(overflowKind, to_the_message, NaConfig.INSTANCE.getChatMenuItemGoToMessage().Bool())) headerItem.lazilyAddSubItem(to_the_message, R.drawable.msg_go_up, getString(R.string.ToTheMessage));
+            if (OverflowMenus.include(overflowKind, nkbtn_bookmarks_manager, NaConfig.INSTANCE.getShowAddToBookmark().Bool())) {
                 bookmarksItem = headerItem.lazilyAddSubItem(nkbtn_bookmarks_manager, R.drawable.msg_fave, getString(R.string.BookmarksManager));
                 headerItem.setSubItemShown(nkbtn_bookmarks_manager, BookmarksHelper.getBookmarkedMessageIds(currentAccount, dialog_id).length > 0);
             }
-            hideTitleItem = NaConfig.INSTANCE.getChatMenuItemHideTitle().Bool() ? headerItem.lazilyAddSubItem(nkheaderbtn_hide_title, R.drawable.hide_title, getString(R.string.HideTitle)) : null;
-            if (NaConfig.INSTANCE.getChatMenuItemViewDeleted().Bool() && NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) headerItem.lazilyAddSubItem(nkbtn_viewDeleted, R.drawable.msg_view_file, getString(R.string.ViewDeleted));
-            if (NaConfig.INSTANCE.getChatMenuItemClearDeleted().Bool() && NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) headerItem.lazilyAddSubItem(nkbtn_clearDeleted, R.drawable.msg_clear, getString(R.string.ClearDeleted));
+            hideTitleItem = OverflowMenus.include(overflowKind, nkheaderbtn_hide_title, NaConfig.INSTANCE.getChatMenuItemHideTitle().Bool()) ? headerItem.lazilyAddSubItem(nkheaderbtn_hide_title, R.drawable.hide_title, getString(R.string.HideTitle)) : null;
+            if (OverflowMenus.include(overflowKind, nkbtn_viewDeleted, NaConfig.INSTANCE.getChatMenuItemViewDeleted().Bool()) && NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) headerItem.lazilyAddSubItem(nkbtn_viewDeleted, R.drawable.msg_view_file, getString(R.string.ViewDeleted));
+            if (OverflowMenus.include(overflowKind, nkbtn_clearDeleted, NaConfig.INSTANCE.getChatMenuItemClearDeleted().Bool()) && NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) headerItem.lazilyAddSubItem(nkbtn_clearDeleted, R.drawable.msg_clear, getString(R.string.ClearDeleted));
             if (!isTopic) {
-                if (NaConfig.INSTANCE.getChatMenuItemDeleteOwnMessages().Bool() && (ChatObject.isMegagroup(currentChat) || currentChat != null && !ChatObject.isChannel(currentChat))) {
+                if (OverflowMenus.include(overflowKind, nkheaderbtn_zibi, NaConfig.INSTANCE.getChatMenuItemDeleteOwnMessages().Bool()) && (ChatObject.isMegagroup(currentChat) || currentChat != null && !ChatObject.isChannel(currentChat))) {
                     headerItem.lazilyAddSubItem(nkheaderbtn_zibi, R.drawable.msg_delete, LocaleController.getString(R.string.DeleteAllFromSelf));
                 }
                 if (ChatObject.isChannel(currentChat) && !currentChat.creator) {
@@ -5180,6 +5182,11 @@ public class ChatActivity extends BaseFragment implements
                     headerItem,
                     app.exteraless.plugins.MenuItemRecord.MenuType.CHAT_ACTION_MENU,
                     pluginMenuContext, themeDelegate, pluginsMenu);
+        }
+        if (headerItem != null && chatMode != MODE_EDIT_BUSINESS_LINK) {
+            final int menuKind = OverflowMenus.kindForChat(currentUser, currentChat);
+            headerItem.setSubOrderRefresher(() -> OverflowMenus.apply(headerItem, menuKind));
+            OverflowMenus.apply(headerItem, menuKind);
         }
 
         actionModeViews.clear();

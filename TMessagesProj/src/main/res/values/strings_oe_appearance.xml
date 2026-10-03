@@ -171,4 +171,17 @@
     <string name="OEProfileDrawerFitStretch">Stretch</string>
     <string name="OEProfileDrawerDimLight">Lighten background</string>
     <string name="OEProfileBannerDimLight">Lighten profile background</string>
+    <string name="OEAppearanceMenu">Menu</string>
+    <string name="OEAppearanceMenuSub">Items in the ⋮ menu</string>
+    <string name="OEMenuOwnProfile">My profile</string>
+    <string name="OEMenuOtherProfile">Other profile</string>
+    <string name="OEMenuChat">Chat</string>
+    <string name="OEMenuSaved">Saved Messages</string>
+    <string name="OEMenuOwnChannel">My channel</string>
+    <string name="OEMenuOtherChannel">Other channel</string>
+    <string name="OEMenuHint">Tap an item to remove it. Drag to reorder.</string>
+    <string name="OEMenuAllVisible">Every item is already in the menu</string>
+    <string name="OEMenuEmpty">Menu is empty</string>
+    <string name="OEMenuResetDone">Menu order reset</string>
+    <string name="OEMenuDeletedNeedSave">This item appears when saving deleted messages is enabled.</string>
 </resources>

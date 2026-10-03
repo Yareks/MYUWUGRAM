@@ -13028,6 +13028,16 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     app.exteraless.plugins.MenuItemRecord.MenuType.PROFILE_ACTION_MENU,
                     pluginMenuContext, resourcesProvider, pluginsMenu);
         }
+        if (userId != 0) {
+            TLRPC.User menuUser = getMessagesController().getUser(userId);
+            if (menuUser != null) {
+                final int menuKind = UserObject.isUserSelf(menuUser)
+                        ? app.exteraless.menu.OverflowMenus.OWN_PROFILE
+                        : app.exteraless.menu.OverflowMenus.OTHER_PROFILE;
+                otherItem.setSubOrderRefresher(() -> app.exteraless.menu.OverflowMenus.apply(otherItem, menuKind));
+                app.exteraless.menu.OverflowMenus.apply(otherItem, menuKind);
+            }
+        }
 
         if (!mediaHeaderVisible) {
             if (callItemVisible) {

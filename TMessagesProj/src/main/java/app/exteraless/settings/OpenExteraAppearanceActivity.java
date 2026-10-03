@@ -40,6 +40,7 @@ import app.exteraless.appearance.ChatListPreviewCell;
 import app.exteraless.appearance.FabShapeCell;
 import app.exteraless.appearance.FoldersPreviewCell;
 import app.exteraless.icons.IconPacksActivity;
+import app.exteraless.menu.OverflowMenuActivity;
 import app.exteraless.pillstack.PillStackSettingsActivity;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.config.ConfigItem;
@@ -154,6 +155,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int iconPacksRow;
     private int emojiSetsRow;
     private int pillStackRow;
+    private int overflowMenuRow;
     private int linksDividerRow;
 
     private AvatarCornersPreviewCell avatarCornersPreviewCell;
@@ -219,6 +221,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         iconPacksRow = addRow("iconPacks");
         emojiSetsRow = addRow("emojiSets", "EmojiSets");
         pillStackRow = addRow("pillStack");
+        overflowMenuRow = addRow("OEAppearanceMenu");
         linksDividerRow = addRow();
 
         appearanceHeaderRow = addRow("appearanceHeader");
@@ -564,6 +567,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == pillStackRow) {
             presentFragment(new PillStackSettingsActivity());
+            return;
+        } else if (position == overflowMenuRow) {
+            presentFragment(new OverflowMenuActivity());
             return;
         } else if (position == appNavigationRow) {
             presentFragment(new OpenExteraAppNavigationActivity());
@@ -1111,7 +1117,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == emojiSetsRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.EmojiSets), getString(R.string.OEAppearanceEmojiSetsInfo), R.drawable.msg_emoji_smiles, true);
                     } else if (position == pillStackRow) {
-                        cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePillStack), getString(R.string.OEAppearancePillStackInfo), R.drawable.outline_header_search, false);
+                        cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePillStack), getString(R.string.OEAppearancePillStackInfo), R.drawable.outline_header_search, true);
+                    } else if (position == overflowMenuRow) {
+                        cell.setTextAndValueAndIcon(getString(R.string.OEAppearanceMenu), getString(R.string.OEAppearanceMenuSub), R.drawable.ic_ab_other, false);
                     }
                     break;
                 }
@@ -1180,7 +1188,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             } else if (position == fabShapeRow) {
                 return TYPE_FAB_SHAPE;
             } else if (position == appNavigationRow || position == profileDrawerRow || position == iconPacksRow
-                    || position == emojiSetsRow || position == pillStackRow) {
+                    || position == emojiSetsRow || position == pillStackRow || position == overflowMenuRow) {
                 return TYPE_DETAIL_SETTINGS;
             } else if (position == md3GroupRow || position == hideAiGroupRow
                     || position == iosGroupRow || position == hideSettingsGroupRow) {

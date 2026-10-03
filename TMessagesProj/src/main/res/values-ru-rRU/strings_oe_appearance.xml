@@ -162,4 +162,17 @@
     <string name="OEProfileDrawerFitStretch">Растянуть</string>
     <string name="OEProfileDrawerDimLight">Осветление фона</string>
     <string name="OEProfileBannerDimLight">Осветление фона профиля</string>
+    <string name="OEAppearanceMenu">Меню</string>
+    <string name="OEAppearanceMenuSub">Что показывать в меню ⋮</string>
+    <string name="OEMenuOwnProfile">Мой профиль</string>
+    <string name="OEMenuOtherProfile">Чужой профиль</string>
+    <string name="OEMenuChat">Чат</string>
+    <string name="OEMenuSaved">Избранное</string>
+    <string name="OEMenuOwnChannel">Мой канал</string>
+    <string name="OEMenuOtherChannel">Чужой канал</string>
+    <string name="OEMenuHint">Нажмите пункт, чтобы убрать. Перетащите, чтобы изменить порядок.</string>
+    <string name="OEMenuAllVisible">Все пункты уже в меню</string>
+    <string name="OEMenuEmpty">Меню пустое</string>
+    <string name="OEMenuResetDone">Порядок меню сброшен</string>
+    <string name="OEMenuDeletedNeedSave">Пункт появится, когда включено сохранение удалённых сообщений.</string>
 </resources>
