@@ -227,11 +227,13 @@ public class OverflowMenuActivity extends BaseFragment {
         plus.setOnClickListener(this::showAddPopup);
         card.addView(plus, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
 
-        int cardWidth = Math.min(dp(280), AndroidUtilities.displaySize.x - dp(48));
-        if (cardWidth < dp(220)) {
-            cardWidth = dp(260);
-        }
-        column.addView(card, LayoutHelper.createLinear(cardWidth, LayoutHelper.WRAP_CONTENT, Gravity.END));
+        int availableWidth = Math.max(dp(1), AndroidUtilities.displaySize.x - dp(28));
+        int cardWidth = Math.min(dp(280), availableWidth);
+        // cardWidth is already in px; LayoutHelper would convert it from dp a second time.
+        LinearLayout.LayoutParams cardLayoutParams = new LinearLayout.LayoutParams(
+                cardWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
+        cardLayoutParams.gravity = Gravity.END;
+        column.addView(card, cardLayoutParams);
         page.addView(column, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
         ScrollView scroll = new ScrollView(context);
